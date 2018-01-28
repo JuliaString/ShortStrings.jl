@@ -46,3 +46,12 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     title="String sort performance - len: $(N÷1_000_000)m, fixed size: 15",
     label = "seconds")
 savefig("readme_string_sort_fixed_len.png")
+
+N = 100_000_000
+@time a = ShorterString.()
+
+fsort(s) = sort(s, by = x->x.size_content, alg=RadixSort);
+@time a_sorted = fsort(a);
+
+ax = (x->x.size_content).(a)
+@time sort(ax, alg=RadixSort);
