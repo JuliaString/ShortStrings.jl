@@ -5,3 +5,4 @@
 *.csv
 
 *.png
+!readme_string_sort.png

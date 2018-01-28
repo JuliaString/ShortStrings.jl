@@ -35,3 +35,4 @@ end
 string_sort_perf(100, 100) # warm up
 
 @time string_sort_perf.((1:10).*10^8, 100)
+

@@ -29,6 +29,9 @@ Base.display(s::ShortString) = display(s.size_content)
 Base.convert(::ShortString, s::String) = ShortString(s)
 Base.convert(::String, ss::ShortString) = reduce(*, ss)
 Base.start(::ShortString) = 1
+# Base.sort(svec::AbstractVector{ShortString}; rev::Bool = false) = sort(svec, rev=rev, by = x->x.size_content, alg=RadixSort)
 # Base.sort(x::AbstractVector{ShortString}; kwargs...) = sort(x, by = x->x.size_content, alg = RadixSort; kwargs...)
 
 end # module
+
+
