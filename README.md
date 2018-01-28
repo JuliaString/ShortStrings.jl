@@ -1,5 +1,5 @@
 # ShortStrings
-This is an efficient string format for storing strings of size less than 15 bytes.
+This is an efficient string format for storing strings of size less than 15 bytes. 
 
 # Quick Start
 ```julia
@@ -14,6 +14,7 @@ ssvec = ShortString.(svec)
 
 # Benchmark
 ![String shorting performance](readme_string_sort.png)
+
 
 ## Benchmarking code
 ```julia
@@ -40,6 +41,11 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     label = "seconds")
 savefig("readme_string_sort.png")
 ```
+
+# Notes
+This is based on the discussion [here](https://discourse.julialang.org/t/progress-towards-faster-sortperm-for-strings/8505/4?u=xiaodai). If Base adopts the hybrid representation of strings then it makes this package redundant.
+
+# Build Status
 
 [![Build Status](https://travis-ci.org/xiaodaigh/ShortStrings.jl.svg?branch=master)](https://travis-ci.org/xiaodaigh/ShortStrings.jl)
 
