@@ -2,7 +2,7 @@ __precompile__(true)
 module ShortStrings
 
 using SortingAlgorithms
-export ShortString, ShortString15, ShortString7, ShortString3, fsort
+export ShortString, ShortString15, ShortString7, ShortString3, fsort, fsort!
 
 struct ShortString{T} <: AbstractString where T
     size_content::T
@@ -41,6 +41,9 @@ const ShortString3 = ShortString{UInt32}
 
 
 fsort(v::Vector{ShortString{T}}; rev = false) where T = sort(v, rev = rev, by = size_content, alg = RadixSort)
+fsort!(v::Vector{ShortString{T}}; rev = false) where T = sort!(v, rev = rev, by = size_content, alg = RadixSort)
+
+fsortperm(v::Vector{ShortString{T}}; rev = false) = sortperm(v, rev = rev)
 
 # struct ShorterString <: AbstractString
 #     size_content::UInt64
