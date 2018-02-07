@@ -7,9 +7,13 @@ using SortingLab, ShortStrings, SortingAlgorithms
 N = Int(1e6)
 svec = [randstring(rand(1:15)) for i=1:N]
 # convert to ShortString
-ssvec = ShortString.(svec)
+ssvec = ShortString15.(svec)
 @time sort(svec);
 @time sort(ssvec, by = x->x.size_content, alg=RadixSort);
+
+# convertion to shorter strings are also possible with
+ShortString7(randstring(7))
+ShortString7(randstring(3))
 ```
 
 # Benchmark
@@ -18,12 +22,12 @@ ssvec = ShortString.(svec)
 
 ## Benchmarking code
 ```julia
-# short be
+
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
 N = Int(1e6);
 svec = [randstring(rand(1:15)) for i=1:N];
 # convert to ShortString
-ssvec = ShortString.(svec);
+ssvec = ShortString15.(svec);
 basesort = @benchmark sort($svec)
 radixsort_timings = @benchmark SortingLab.radixsort($svec)
 short_radixsort = @benchmark sort($ssvec, by = x->x.size_content, alg=RadixSort)
@@ -43,12 +47,11 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
 savefig("readme_string_sort.png")
 
 
-# short be
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
 N = Int(2e7);
 svec = rand([randstring(rand(1:15)) for i=1:N÷100],N)
 # convert to ShortString
-ssvec = ShortString.(svec);
+ssvec = ShortString15.(svec);
 basesort = @benchmark sort($svec) samples = 5 seconds = 120
 radixsort_timings = @benchmark SortingLab.radixsort($svec) samples = 5 seconds = 120
 short_radixsort = @benchmark sort($ssvec, by = x->x.size_content, alg=RadixSort) samples = 5 seconds = 120
@@ -69,7 +72,7 @@ savefig("readme_string_sort_fixed_len.png")
 ```
 
 # Notes
-This is based on the discussion [here](https://discourse.julialang.org/t/progress-towards-faster-sortperm-for-strings/8505/4?u=xiaodai). If Base adopts the hybrid representation of strings then it makes this package redundant.
+This is based on the discussion [here](https://discourse.julialang.org/t/progress-towards-faster-sortperm-for-strings/8505/4?u=xiaodai). If Julia.Base adopts the hybrid representation of strings then it makes this package redundant.
 
 # Build Status
 
