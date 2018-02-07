@@ -3,7 +3,7 @@ This is an efficient string format for storing strings of size less than 15 byte
 
 # Quick Start
 ```julia
-using SortingLab, ShortStrings, SortingAlgorithms
+using ShortStrings, SortingAlgorithms
 N = Int(1e6)
 svec = [randstring(rand(1:15)) for i=1:N]
 # convert to ShortString
@@ -22,7 +22,6 @@ ShortString7(randstring(3))
 
 ## Benchmarking code
 ```julia
-
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
 N = Int(1e6);
 svec = [randstring(rand(1:15)) for i=1:N];
@@ -30,12 +29,17 @@ svec = [randstring(rand(1:15)) for i=1:N];
 ssvec = ShortString15.(svec);
 basesort = @benchmark sort($svec)
 radixsort_timings = @benchmark SortingLab.radixsort($svec)
-short_radixsort = @benchmark sort($ssvec, by = x->x.size_content, alg=RadixSort)
+short_radixsort = @benchmark ShortStrings.fsort($ssvec)
+# another way to do sorting
+sort(ssvec, by = x->x.size_content, alg=RadixSort)
 
 using RCall
-
+R"""
+memory.limit(2^31-1)
+"""
 @rput svec;
 r_timings = R"""
+memory.limit(2^31-1)
 replicate($(length(short_radixsort.times)), system.time(sort(svec, method="radix"))[3])
 """;
 
@@ -54,7 +58,7 @@ svec = rand([randstring(rand(1:15)) for i=1:N÷100],N)
 ssvec = ShortString15.(svec);
 basesort = @benchmark sort($svec) samples = 5 seconds = 120
 radixsort_timings = @benchmark SortingLab.radixsort($svec) samples = 5 seconds = 120
-short_radixsort = @benchmark sort($ssvec, by = x->x.size_content, alg=RadixSort) samples = 5 seconds = 120
+short_radixsort = @benchmark ShortStrings.fsort($ssvec) samples = 5 seconds = 120
 
 using RCall
 
