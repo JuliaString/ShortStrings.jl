@@ -43,7 +43,7 @@ const ShortString3 = ShortString{UInt32}
 fsort(v::Vector{ShortString{T}}; rev = false) where T = sort(v, rev = rev, by = size_content, alg = RadixSort)
 fsort!(v::Vector{ShortString{T}}; rev = false) where T = sort!(v, rev = rev, by = size_content, alg = RadixSort)
 
-fsortperm(v::Vector{ShortString{T}}; rev = false) = sortperm(v, rev = rev)
+fsortperm(v::Vector{ShortString{T}}; rev = false) where T = sortperm(v, rev = rev)
 
 # struct ShorterString <: AbstractString
 #     size_content::UInt64
