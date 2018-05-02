@@ -20,3 +20,8 @@ a = ShortString{UInt32}.(r)
 @test all(ShortString3.(r) .== r)
 a = ShortString3.(r)
 @test fsort(a) |> issorted
+
+
+
+@test collect(ShortString3("abc")) == ['a', 'b', 'c']
+

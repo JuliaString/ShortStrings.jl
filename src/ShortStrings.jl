@@ -25,13 +25,17 @@ struct ShortString{T} <: AbstractString where T
 end
 
 Base.endof(s::ShortString) = Int(s.size_content & 0xf)
-Base.next(s::ShortString{T}, i::Int) where T = (Char((s.size_content << 8(i-1)) >> 8*(sizeof(T)-1)), i + 1)
+Base.next(s::ShortString, i::Int) = (Base.unsafe_getindex(s, i), i + 1)
 Base.sizeof(s::ShortString) = Int(s.size_content & 0xf)
 Base.print(s::ShortString) = print(s.size_content)
 Base.display(s::ShortString) = display(s.size_content)
 Base.convert(::ShortString, s::String) = ShortString(s)
 Base.convert(::String, ss::ShortString) = reduce(*, ss)
 Base.start(::ShortString) = 1
+
+
+Base.unsafe_getindex(s::ShortString{T}, i::Int) where T = Char((s.size_content << 8(i-1)) >> 8*(sizeof(T)-1))
+Base.collect(s::ShortString) = Base.unsafe_getindex.(s, 1:Base.endof(s))
 
 size_content(s::ShortString) = s.size_content
 
