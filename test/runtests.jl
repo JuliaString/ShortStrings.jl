@@ -1,5 +1,5 @@
 using ShortStrings
-using Base.Test
+using Test, Random
 
 # write your own tests here
 r = randstring.(1:15)
@@ -24,4 +24,3 @@ a = ShortString3.(r)
 
 
 @test collect(ShortString3("abc")) == ['a', 'b', 'c']
-
