@@ -1,5 +1,5 @@
 # ShortStrings
-This is an efficient string format for storing strings of size less than 15 bytes. 
+This is an efficient string format for storing strings of size less than 15 bytes.
 
 # Quick Start
 ```julia
@@ -11,13 +11,18 @@ ssvec = ShortString15.(svec)
 @time sort(svec);
 @time sort(ssvec, by = x->x.size_content, alg=RadixSort);
 
-# convertion to shorter strings are also possible with
+# conversion to shorter strings is also possible with
 ShortString7(randstring(7))
-ShortString7(randstring(3))
+ShortString3(randstring(3))
+
+# convenience macros are provided for writing actual strings (e.g., for comparison)
+s15 = ss15"A short string"  # ShortString15 === ShortString{Int128}
+s7 = ss7"shorter"           # ShortString7 === ShortString{Int64}
+s3 = ss3"srt"               # ShortString3 === ShortString{Int32}
 ```
 
 # Benchmark
-![String shorting performance](readme_string_sort.png)
+![String sorting performance](readme_string_sort.png)
 
 
 ## Benchmarking code
