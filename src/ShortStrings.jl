@@ -51,6 +51,20 @@ const ShortString15 = ShortString{UInt128}
 const ShortString7 = ShortString{UInt64}
 const ShortString3 = ShortString{UInt32}
 
+# ss15"ShortString15"
+macro ss15_str(s)
+    :(ShortString15($s))
+end
+
+# ss7"Short7"
+macro ss7_str(s)
+    :(ShortString7($s))
+end
+
+# ss3"ss3"
+macro ss3_str(s)
+    :(ShortString3($s))
+end
 
 fsort(v::Vector{ShortString{T}}; rev = false) where T = sort(v, rev = rev, by = size_content, alg = RadixSort)
 fsort!(v::Vector{ShortString{T}}; rev = false) where T = sort!(v, rev = rev, by = size_content, alg = RadixSort)
