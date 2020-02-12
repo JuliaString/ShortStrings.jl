@@ -2,7 +2,8 @@ __precompile__(true)
 module ShortStrings
 
 using SortingAlgorithms
-export ShortString, ShortString15, ShortString7, ShortString3, fsort, fsort!
+export ShortString, ShortString15, ShortString7, ShortString3, fsort, fsort!,
+       @ss15_str, @ss7_str, @ss3_str
 
 import Base:unsafe_getindex, ==
 
