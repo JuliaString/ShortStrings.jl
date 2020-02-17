@@ -5,7 +5,7 @@ using SortingAlgorithms
 export ShortString, ShortString15, ShortString7, ShortString3, fsort, fsort!,
        @ss15_str, @ss7_str, @ss3_str
 
-import Base:unsafe_getindex, ==
+import Base:unsafe_getindex, ==, show, promote_rule
 
 struct ShortString{T} <: AbstractString where T
     size_content::T
@@ -23,21 +23,23 @@ end
 
 String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
 
-Base.lastindex(s::ShortString) = Int(s.size_content & 0xf)
-Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
-Base.iterate(s::ShortString) = iterate(String(s))
-Base.sizeof(s::ShortString) = Int(s.size_content & 0xf)
-Base.print(s::ShortString) = print(String(s))
-Base.display(s::ShortString) = display(String(s))
+Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
+Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
+Base.codeunits(s::ShortString) = codeunits(String(s))
 Base.convert(::ShortString{T}, s::String) where T = ShortString{T}(s)
 Base.convert(::String, ss::ShortString) = String(a) #reduce(*, ss)
+Base.display(s::ShortString) = display(String(s))
 Base.firstindex(::ShortString) = 1
-Base.ncodeunits(s::ShortString) = ncodeunits(String(s))
-Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
+Base.iterate(s::ShortString) = iterate(String(s))
+Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
+Base.lastindex(s::ShortString) = Int(s.size_content & 0xf)
+Base.ncodeunits(s::ShortString) = ncodeunits(String(s))
+Base.print(s::ShortString) = print(String(s))
+Base.show(io::IO, str::ShortString) = show(io, String(str))
+Base.sizeof(s::ShortString) = Int(s.size_content & 0xf)
 
 Base.getindex(s::ShortString{T}, i::Integer) where T = begin
-    print(i)
     Char((s.size_content << 8(i-1)) >> 8(sizeof(T)-1))
 end
 Base.collect(s::ShortString) = getindex.(s, 1:lastindex(s))
@@ -45,6 +47,9 @@ Base.collect(s::ShortString) = getindex.(s, 1:lastindex(s))
 ==(s::ShortString, b::String) = begin
     String(s)  == b
 end
+
+promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
+promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S} = ShortString{promote_rule(T,S)}
 
 size_content(s::ShortString) = s.size_content
 
