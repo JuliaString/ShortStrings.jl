@@ -23,6 +23,7 @@ end
 
 String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
 
+Base.codeunit(s::ShortString) = codeunit(String(s))
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
 Base.codeunits(s::ShortString) = codeunits(String(s))
