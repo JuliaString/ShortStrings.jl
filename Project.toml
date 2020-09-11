@@ -9,6 +9,7 @@ SortingAlgorithms = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 
 [compat]
 SortingAlgorithms = "0.3"
+BitIntegers = "0.2"
 julia = "1"
 
 [extras]
