@@ -1,9 +1,11 @@
 __precompile__(true)
 module ShortStrings
 
+using BitIntegers
 using SortingAlgorithms
-export ShortString, ShortString15, ShortString7, ShortString3, fsort, fsort!,
-       @ss15_str, @ss7_str, @ss3_str
+export fsort, fsort!, ShortString,
+    ShortString3, ShortString7, ShortString15, ShortString30, ShortString62, ShortString126,
+    @ss3_str, @ss7_str, @ss15_str, @ss30_str, @ss62_str, @ss126_str
 
 import Base:unsafe_getindex, ==, show, promote_rule
 
@@ -13,8 +15,9 @@ end
 
 function ShortString{T}(s::String) where T
     sz = sizeof(s)
-    if sz > sizeof(T) - 1 # the last byte is used to store the length
-        throw(ErrorException("sizeof(::ShortString) must be shorter than or equal to $(sizeof(T) - 1) in length; you have supplied a string of size $sz"))
+    max_len = sizeof(T) - size_nibbles(T)
+    if sz > max_len # the last byte is used to store the length
+        throw(ErrorException("sizeof(::ShortString) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
     end
     bits_to_wipe = 8(sizeof(T) - sz)
     content = (T(s |> pointer |> Ptr{T} |> Base.unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
@@ -34,11 +37,20 @@ Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.iterate(s::ShortString) = iterate(String(s))
 Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
-Base.lastindex(s::ShortString) = Int(s.size_content & 0xf)
+Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = ncodeunits(String(s))
 Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
-Base.sizeof(s::ShortString) = Int(s.size_content & 0xf)
+Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & size_mask(T))
+
+size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
+size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
+size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
+size_nibbles(::Type{<:Union{Int256, Int512, Int1024}}) = 2
+size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
+
+size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
+
 
 Base.getindex(s::ShortString{T}, i::Integer) where T = begin
     Char((s.size_content << 8(i-1)) >> 8(sizeof(T)-1))
@@ -54,23 +66,15 @@ promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S} = Short
 
 size_content(s::ShortString) = s.size_content
 
-const ShortString15 = ShortString{UInt128}
-const ShortString7 = ShortString{UInt64}
-const ShortString3 = ShortString{UInt32}
+for T in (UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
+    max_len = sizeof(T) - size_nibbles(T)
+    constructor_name = Symbol(:ShortString, max_len)
+    macro_name = Symbol(:ss, max_len, :_str)
 
-# ss15"ShortString15"
-macro ss15_str(s)
-    :(ShortString15($s))
-end
-
-# ss7"Short7"
-macro ss7_str(s)
-    :(ShortString7($s))
-end
-
-# ss3"ss3"
-macro ss3_str(s)
-    :(ShortString3($s))
+    @eval const $constructor_name = ShortString{$T}
+    @eval macro $(macro_name)(s)
+        Expr(:call, $constructor_name, s)
+    end
 end
 
 fsort(v::Vector{ShortString{T}}; rev = false) where T = sort(v, rev = rev, by = size_content, alg = RadixSort)
