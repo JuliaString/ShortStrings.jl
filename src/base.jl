@@ -14,6 +14,9 @@ function ShortString{T}(s::Union{String, SubString{String}}) where T
         throw(ErrorException("sizeof(::ShortString) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
     end
     bits_to_wipe = 8(sizeof(T) - sz)
+    # TODO some times this can throw errors for longish strings
+    # Exception: EXCEPTION_ACCESS_VIOLATION at 0x1e0b7afd -- bswap at C:\Users\RTX2080\.julia\packages\BitIntegers\xU40U\src\BitIntegers.jl:332 [inlined]
+    # ntoh at .\io.jl:541 [inlined]
     content = (T(s |> pointer |> Ptr{T} |> Base.unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
     ShortString{T}(content | T(sz))
 end
@@ -25,7 +28,7 @@ Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
 Base.codeunits(s::ShortString) = codeunits(String(s))
 Base.convert(::ShortString{T}, s::String) where T = ShortString{T}(s)
-Base.convert(::String, ss::ShortString) = String(a) #reduce(*, ss)
+Base.convert(::String, ss::ShortString) = String(ss)
 Base.display(s::ShortString) = display(String(s))
 Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
@@ -46,13 +49,18 @@ size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
 size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
 
 
-Base.getindex(s::ShortString{T}, i::Integer) where T = begin
-    Char((s.size_content << 8(i-1)) >> 8(sizeof(T)-1))
-end
-Base.collect(s::ShortString) = getindex.(s, 1:lastindex(s))
+# function Base.getindex(s::ShortString, i::Integer)
+#     getindex(String(s), i)
+# end
 
-==(s::ShortString, b::String) = begin
-    String(s)  == b
+# function Base.getindex(s::ShortString, args...; kwargs...)
+#     getindex(String(s), args...; kwargs...)
+# end
+
+Base.collect(s::ShortString) = collect(String(s))
+
+==(s::ShortString, b::AbstractString) = begin
+    String(s) == b
 end
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String

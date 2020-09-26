@@ -2,6 +2,9 @@ using ShortStrings
 using BitIntegers: UInt256, UInt512, UInt1024, @define_integers
 using Test, Random
 
+include("getindex.jl")
+include("hash.jl")
+
 function basic_test(constructor, max_len)
     @testset "$constructor" begin
         for string_type in (String, SubString{String})
