@@ -6,3 +6,4 @@
 
 *.png
 !readme_string_sort.png
+Manifest.toml

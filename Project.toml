@@ -1,15 +1,15 @@
 name = "ShortStrings"
 uuid = "63221d1c-8677-4ff0-9126-0ff0817b4975"
 authors = ["Dai ZJ <zhuojia.dai@gmail.com>"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 BitIntegers = "c3b6d118-76ef-56ca-8cc7-ebb389d030a1"
 SortingAlgorithms = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 
 [compat]
-SortingAlgorithms = "0.3"
 BitIntegers = "0.2"
+SortingAlgorithms = "0.3"
 julia = "1"
 
 [extras]
