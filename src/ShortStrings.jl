@@ -12,7 +12,7 @@ struct ShortString{T} <: AbstractString where T
     size_content::T
 end
 
-function ShortString{T}(s::String) where T
+function ShortString{T}(s::Union{String, SubString{String}}) where T
     sz = sizeof(s)
     max_len = sizeof(T) - size_nibbles(T)
     if sz > max_len # the last byte is used to store the length

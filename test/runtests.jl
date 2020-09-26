@@ -4,15 +4,24 @@ using Test, Random
 
 function basic_test(constructor, max_len)
     @testset "$constructor" begin
-        r = randstring.(1:max_len)
-        @test all(constructor.(r) .== r)
-        a = constructor.(r)
-        @test fsort(a) |> issorted
-
-        @test collect(constructor("z"^max_len)) == fill('z', max_len)
-        @test_throws ErrorException constructor("a"^(max_len+1))
+        for string_type in (String, SubString{String})
+            @testset "$string_type" begin
+                basic_test(string_type, constructor, max_len)
+            end
+        end
     end
 end
+
+function basic_test(string_type, constructor, max_len)
+    r = string_type.(randstring.(1:max_len))
+    @test all(constructor.(r) .== r)
+    a = constructor.(r)
+    @test fsort(a) |> issorted
+
+    @test collect(constructor("z"^max_len)) == fill('z', max_len)
+    @test_throws ErrorException constructor("a"^(max_len+1))
+end
+
 
 basic_test(ShortString3, 3)
 basic_test(ShortString7, 7)
