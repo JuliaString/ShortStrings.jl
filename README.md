@@ -15,6 +15,8 @@ N = Int(1e6)
 svec = [randstring(rand(1:15)) for i=1:N]
 # convert to ShortString
 ssvec = ShortString15.(svec)
+
+# sort short vectors
 @time sort(svec);
 @time sort(ssvec, by = x->x.size_content, alg=RadixSort);
 
@@ -30,8 +32,8 @@ s3 = ss3"srt"               # ShortString3 === ShortString{Int32}
 
 
 ````
-0.339147 seconds (131 allocations: 11.451 MiB)
-  0.359553 seconds (784.87 k allocations: 71.526 MiB, 13.41% gc time)
+0.305076 seconds (9 allocations: 11.445 MiB)
+  0.166334 seconds (259.04 k allocations: 44.419 MiB)
 "srt"
 ````
 
@@ -41,8 +43,6 @@ s3 = ss3"srt"               # ShortString3 === ShortString{Int32}
 
 ## Benchmarks
 
-<details>
-<summary><b>Code</b></summary>
 ````julia
 
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
@@ -57,9 +57,6 @@ short_radixsort = @benchmark ShortStrings.fsort($ssvec)
 sort(ssvec, by = x->x.size_content, alg=RadixSort)
 
 using RCall
-R"""
-memory.limit(2^31-1)
-"""
 @rput svec;
 r_timings = R"""
 memory.limit(2^31-1)
@@ -76,15 +73,10 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
 
 ![](figures/README_2_1.png)
 
-
-</details>
-
-<details>
-<summary><b>Code</b></summary>
 ````julia
 
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
-N = Int(2e7);
+N = Int(1e6);
 svec = rand([randstring(rand(1:15)) for i=1:N÷100],N)
 # convert to ShortString
 ssvec = ShortString15.(svec);
@@ -110,7 +102,6 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
 ![](figures/README_3_1.png)
 
 
-</details>
 
 ## Notes
 This is based on the discussion [here](https://discourse.julialang.org/t/progress-towards-faster-sortperm-for-strings/8505/4?u=xiaodai). If Julia.Base adopts the hybrid representation of strings then it makes this package redundant.

@@ -46,7 +46,6 @@ sort(ssvec, by = x->x.size_content, alg=RadixSort)
 using RCall
 @rput svec;
 r_timings = R"""
-memory.limit(2^31-1)
 replicate($(length(short_radixsort.times)), system.time(sort(svec, method="radix"))[3])
 """;
 
