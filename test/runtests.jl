@@ -23,6 +23,16 @@ function basic_test(string_type, constructor, max_len)
 
     @test collect(constructor("z"^max_len)) == fill('z', max_len)
     @test_throws ErrorException constructor("a"^(max_len+1))
+
+    # equality
+    @test constructor("c"^max_len) == "c"^max_len
+    @test "c"^max_len == constructor("c"^max_len)
+    @test constructor("c"^max_len) == constructor("c"^max_len)
+    @test constructor("c"^max_len) != constructor("d"^max_len)
+    @test constructor("c"^max_len) != constructor("c"^(max_len-1))
+    @test constructor("c"^(max_len-1)) != constructor("c"^max_len)
+    @test constructor("c"^max_len) != "c"^(max_len-1)
+    @test constructor("c"^(max_len-1)) != "c"^max_len
 end
 
 

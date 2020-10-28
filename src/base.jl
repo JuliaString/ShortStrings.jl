@@ -8,7 +8,7 @@ end
 
 
 function ShortString{T}(s::Union{String, SubString{String}}) where T
-    sz = sizeof(s)
+    sz = ncodeunits(s)
     max_len = sizeof(T) - size_nibbles(T)
     if sz > max_len # the last byte is used to store the length
         throw(ErrorException("sizeof(::ShortString) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
@@ -35,7 +35,7 @@ Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.iterate(s::ShortString) = iterate(String(s))
 Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
-Base.ncodeunits(s::ShortString) = ncodeunits(String(s))
+Base.ncodeunits(s::ShortString) = sizeof(s)
 Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
 Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & size_mask(T))
@@ -59,8 +59,13 @@ size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
 
 Base.collect(s::ShortString) = collect(String(s))
 
-==(s::ShortString, b::AbstractString) = begin
-    String(s) == b
+function ==(s::ShortString{S}, b::AbstractString) where S
+    ncodeunits(b) == ncodeunits(s) || return false
+    return s == ShortString{S}(b)
+end
+==(a::AbstractString, b::ShortString) = b == a
+function ==(a::ShortString{S}, b::ShortString{S}) where S
+    return a.size_content == b.size_content
 end
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
