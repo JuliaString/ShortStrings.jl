@@ -51,3 +51,22 @@ basic_test(ShortString{MyUInt2048}, 254)
 @test ss15"Short String!!!" === ShortString15("Short String!!!")
 @test ss7"ShrtStr" === ShortString7("ShrtStr")
 @test ss3"ss3" === ShortString3("ss3")
+
+
+@testset "cmp" begin
+    @test cmp(ShortString3("abc"), ShortString3("abc")) == 0
+    @test cmp(ShortString3("ab"), ShortString3("abc")) == -1
+    @test cmp(ShortString3("abc"), ShortString3("ab")) == 1
+    @test cmp(ShortString3("ab"), ShortString3("ac")) == -1
+    @test cmp(ShortString3("ac"), ShortString3("ab")) == 1
+    @test cmp(ShortString3("α"), ShortString3("a")) == 1
+    @test cmp(ShortString3("b"), ShortString3("β")) == -1
+
+    @test cmp(ShortString3("abc"), "abc") == 0
+    @test cmp(ShortString3("ab"), "abc") == -1
+    @test cmp(ShortString3("abc"), "ab") == 1
+    @test cmp(ShortString3("ab"), "ac") == -1
+    @test cmp(ShortString3("ac"), "ab") == 1
+    @test cmp(ShortString3("α"), "a") == 1
+    @test cmp(ShortString3("b"), "β") == -1
+end

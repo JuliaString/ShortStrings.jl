@@ -63,6 +63,10 @@ Base.collect(s::ShortString) = collect(String(s))
     String(s) == b
 end
 
+function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
+    return cmp(a.size_content, b.size_content)
+end
+
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
 promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S} = ShortString{promote_rule(T,S)}
 
