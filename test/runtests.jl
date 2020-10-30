@@ -61,3 +61,16 @@ basic_test(ShortString{MyUInt2048}, 254)
 @test ss15"Short String!!!" === ShortString15("Short String!!!")
 @test ss7"ShrtStr" === ShortString7("ShrtStr")
 @test ss3"ss3" === ShortString3("ss3")
+
+
+@testset "equality of different sized ShortStrings" begin
+    @test ShortString15("ab") == ShortString3("ab")
+    @test ShortString3("ab") == ShortString15("ab")
+
+    @test ShortString30("x") != ShortString3("y")
+    @test ShortString30("y") != ShortString3("x")
+
+    # this one is too big to fit in the other
+    @test ShortString15("abcd") != ShortString3("ab")
+    @test ShortString3("ab") != ShortString15("abcd")
+end
