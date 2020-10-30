@@ -64,17 +64,19 @@ size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
 size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
 size_mask(s::ShortString{T}) where T = size_mask(T)
 
-#==
-function Base.getindex(s::ShortString, i::Integer)
-     getindex(String(s), i)
+@inline function Base.isascii(s::ShortString{T}) where T
+    val = s.size_content << (8*size_nibbles(T))
+    for i in 1:sizeof(T)
+        iszero(val & 0x80) || return false
+        val <<= 8  # first byte never matters as will always be
+    end
+    return true
 end
 
-function Base.getindex(s::ShortString, args...; kwargs...)
-     getindex(String(s), args...; kwargs...)
-end
-==#
+function Base.length(s::ShortString{T}) where T
+    isascii(s) && return ncodeunits(s)
 
-@inline function length(s::ShortString{T}) where T
+    # else have to do it the hard way:
     i = 0
     len = 0
     while i < ncodeunits(s)
@@ -133,11 +135,13 @@ function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
     return cmp(a.size_content, b.size_content)
 end
 
+#= While this works it is slower than converting to a String
+using MurmurHash3
 function Base.hash(s::ShortString, h::UInt)
     h += Base.memhash_seed
     mmhash128_c(s, h % UInt32)[2] + h
 end
-
+=#
 
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
