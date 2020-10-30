@@ -23,7 +23,7 @@ end
 
 String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
 
-Base.codeunit(s::ShortString) = codeunit(String(s))
+Base.codeunit(s::ShortString) = UInt8
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
 Base.codeunits(s::ShortString) = codeunits(String(s))
@@ -59,10 +59,16 @@ size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
 
 Base.collect(s::ShortString) = collect(String(s))
 
-function ==(s::ShortString{S}, b::AbstractString) where S
+function ==(s::ShortString{S}, b::Union{String, SubString{String}) where S
     ncodeunits(b) == ncodeunits(s) || return false
     return s == ShortString{S}(b)
 end
+function ==(s::ShortString, b::AbstractString)
+    # Could be a string type that might not use UTF8 encoding and that we don't have a
+    # constructor for. Defer to equality that that type probably has defined on `String`
+    return String(s) == b
+end
+
 ==(a::AbstractString, b::ShortString) = b == a
 function ==(a::ShortString{S}, b::ShortString{S}) where S
     return a.size_content == b.size_content
