@@ -18,6 +18,7 @@ function basic_test(string_type, constructor, max_len)
     r = string_type.(randstring.(1:max_len))
     @test all(constructor.(r) .== r)
     @test all(hash(constructor.(r)) .== hash(r))
+
     a = constructor.(r)
     @test fsort(a) |> issorted
 

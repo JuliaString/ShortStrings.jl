@@ -1,5 +1,4 @@
 # this is for keeping the basic functionalities
-
 import Base:unsafe_getindex, ==, show, promote_rule
 
 struct ShortString{T} <: AbstractString where T
@@ -49,8 +48,6 @@ Base.convert(::String, ss::ShortString) = String(ss)
 Base.display(s::ShortString) = display(String(s))
 Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
-Base.iterate(s::ShortString) = iterate(String(s))
-Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 Base.print(s::ShortString) = print(String(s))
@@ -66,16 +63,28 @@ size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
 size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
 size_mask(s::ShortString{T}) where T = size_mask(T)
 
+function Base.getindex(s::ShortString, i::Integer)
+     getindex(String(s), i)
+end
 
-# function Base.getindex(s::ShortString, i::Integer)
-#     getindex(String(s), i)
-# end
+function Base.getindex(s::ShortString, args...; kwargs...)
+     getindex(String(s), args...; kwargs...)
+end
 
-# function Base.getindex(s::ShortString, args...; kwargs...)
-#     getindex(String(s), args...; kwargs...)
-# end
 
-Base.collect(s::ShortString) = collect(String(s))
+function Base.iterate(s::ShortString{T}, i::Integer=1) where T
+    i > ncodeunits(s) && return nothing
+    shifted = s.size_content >> 8*(sizeof(T) - i)
+    if shifted % UInt8 <= 0x7f  # 1 byte character
+        return Char(shifted % UInt8), i+1
+    elseif shifted % UInt16 <= 0x7ff  # 2 byte character
+        return Char(shifted % UInt16 % UInt32), i+2
+    elseif shifted % UInt32 <= 0xffff  # 3 byte character
+        return Char(shifted % UInt32 & 0xffff), i+3
+    else  # 4 byte character
+        return Char(shifted % UInt32), i+3
+    end
+end
 
 function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where S
     ncodeunits(b) == ncodeunits(s) || return false
@@ -102,6 +111,13 @@ end
 function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
     return cmp(a.size_content, b.size_content)
 end
+
+function Base.hash(s::ShortString, h::UInt)
+    h += Base.memhash_seed
+    mmhash128_c(s, h % UInt32)[2] + h
+end
+
+
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
 
