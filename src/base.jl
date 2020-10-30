@@ -54,6 +54,7 @@ Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
 Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & (size_mask(s) % UInt))
 
+
 size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
 size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
 size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
@@ -63,6 +64,7 @@ size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
 size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
 size_mask(s::ShortString{T}) where T = size_mask(T)
 
+#==
 function Base.getindex(s::ShortString, i::Integer)
      getindex(String(s), i)
 end
@@ -70,11 +72,30 @@ end
 function Base.getindex(s::ShortString, args...; kwargs...)
      getindex(String(s), args...; kwargs...)
 end
+==#
 
+@inline function length(s::ShortString{T}) where T
+    i = 0
+    len = 0
+    while i < ncodeunits(s)
+        shifted = s.size_content >> (8*(sizeof(T) - i))
+        i += if shifted % UInt8 <= 0x7f  # 1 byte character
+            1
+        elseif shifted % UInt16 <= 0x7ff  # 2 byte character
+            2
+        elseif shifted % UInt32 <= 0xffff  # 3 byte character
+            3
+        else  # 4 byte character
+            4
+        end
+        len += 1
+    end
+    return len
+end
 
-function Base.iterate(s::ShortString{T}, i::Integer=1) where T
+@inline function Base.iterate(s::ShortString{T}, i::Integer=1) where T
     i > ncodeunits(s) && return nothing
-    shifted = s.size_content >> 8*(sizeof(T) - i)
+    shifted = s.size_content >> (8*(sizeof(T) - i))
     if shifted % UInt8 <= 0x7f  # 1 byte character
         return Char(shifted % UInt8), i+1
     elseif shifted % UInt16 <= 0x7ff  # 2 byte character
