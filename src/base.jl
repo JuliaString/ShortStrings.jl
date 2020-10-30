@@ -136,7 +136,7 @@ function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
 end
 
 #= While this works it is slower than converting to a String
-using MurmurHash3
+using MurmurHash3: mmhash128_c
 function Base.hash(s::ShortString, h::UInt)
     h += Base.memhash_seed
     mmhash128_c(s, h % UInt32)[2] + h
