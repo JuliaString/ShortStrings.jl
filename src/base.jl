@@ -82,7 +82,7 @@ function Base.iterate(s::ShortString{T}, i::Integer=1) where T
     elseif shifted % UInt32 <= 0xffff  # 3 byte character
         return Char(shifted % UInt32 & 0xffff), i+3
     else  # 4 byte character
-        return Char(shifted % UInt32), i+3
+        return Char(shifted % UInt32), i+4
     end
 end
 
