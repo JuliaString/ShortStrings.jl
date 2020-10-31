@@ -30,6 +30,9 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     sz = sizeof(s)
     check_size(T, sz)
     # Flip it so empty bytes are at start, grow/shrink it, flip it back
+    # S(size_mask(S)) will return a mask for getting the size for Shorting Strings in (content size)
+    # format, so something like 00001111 in binary.
+    #  ~S(size_mask(S))) will yield 11110000 which can be used as maks to extract the content
     content = ntoh(T(ntoh(s.size_content & ~S(size_mask(S)))))
     ShortString{T}(content | T(sz))
 end
