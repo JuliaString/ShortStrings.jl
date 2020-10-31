@@ -1,6 +1,6 @@
 # this is for keeping the basic functionalities
 
-import Base:unsafe_getindex, ==, show, promote_rule
+import Base:unsafe_getindex, ==, show, promote_rule, promote_eltype
 
 struct ShortString{T} <: AbstractString where T
     size_content::T
@@ -104,7 +104,17 @@ function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
 end
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
-promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S} = ShortString{promote_rule(T,S)}
+
+function promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S}
+    if sizeof(T) >= sizeof(S)
+        return ShortString{promote_rule(T,S)}
+    else
+        return ShortString{promote_rule(S,T)}
+    end
+end
+
+promote_eltype(::Vector{ShortString{T}}, ::Vector{ShortString{S}}) where {T,S} =
+    promote_rule(ShortString{T}, ShortString{S})
 
 size_content(s::ShortString) = s.size_content
 
