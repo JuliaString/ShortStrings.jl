@@ -40,7 +40,7 @@ end
 
 String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
 
-Base.codeunit(s::ShortString) = codeunit(String(s))
+Base.codeunit(s::ShortString) = UInt8
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
 Base.codeunits(s::ShortString) = codeunits(String(s))
@@ -52,10 +52,10 @@ Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.iterate(s::ShortString) = iterate(String(s))
 Base.iterate(s::ShortString, i::Integer) = iterate(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
-Base.ncodeunits(s::ShortString) = ncodeunits(String(s))
+Base.ncodeunits(s::ShortString) = sizeof(s)
 Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
-Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & size_mask(T))
+Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & (size_mask(s) % UInt))
 
 size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
 size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
@@ -63,7 +63,8 @@ size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
 size_nibbles(::Type{<:Union{Int256, Int512, Int1024}}) = 2
 size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
 
-size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
+size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
+size_mask(s::ShortString{T}) where T = size_mask(T)
 
 
 # function Base.getindex(s::ShortString, i::Integer)
@@ -76,9 +77,27 @@ size_mask(T) = UInt(exp2(4*size_nibbles(T)) - 1)
 
 Base.collect(s::ShortString) = collect(String(s))
 
-==(s::ShortString, b::AbstractString) = begin
-    String(s) == b
+function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where S
+    ncodeunits(b) == ncodeunits(s) || return false
+    return s == ShortString{S}(b)
 end
+function ==(s::ShortString, b::AbstractString)
+    # Could be a string type that might not use UTF8 encoding and that we don't have a
+    # constructor for. Defer to equality that type probably has defined on `String`
+    return String(s) == b
+end
+
+==(a::AbstractString, b::ShortString) = b == a
+function ==(a::ShortString{S}, b::ShortString{S}) where S
+    return a.size_content == b.size_content
+end
+function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
+    ncodeunits(a) == ncodeunits(b) || return false
+    # compare if equal after dropping size bits and
+    # flipping so that the empty bytes are at the start
+    ntoh(a.size_content & ~size_mask(A)) == ntoh(b.size_content & ~size_mask(B))
+end
+
 
 function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
     return cmp(a.size_content, b.size_content)

@@ -3,7 +3,6 @@ using BitIntegers: UInt256, UInt512, UInt1024, @define_integers
 using Test, Random
 
 include("getindex.jl")
-include("hash.jl")
 
 function basic_test(constructor, max_len)
     @testset "$constructor" begin
@@ -18,11 +17,22 @@ end
 function basic_test(string_type, constructor, max_len)
     r = string_type.(randstring.(1:max_len))
     @test all(constructor.(r) .== r)
+    @test all(hash(constructor.(r)) .== hash(r))
     a = constructor.(r)
     @test fsort(a) |> issorted
 
     @test collect(constructor("z"^max_len)) == fill('z', max_len)
     @test_throws ErrorException constructor("a"^(max_len+1))
+
+    # equality
+    @test constructor("c"^max_len) == "c"^max_len
+    @test "c"^max_len == constructor("c"^max_len)
+    @test constructor("c"^max_len) == constructor("c"^max_len)
+    @test constructor("c"^max_len) != constructor("d"^max_len)
+    @test constructor("c"^max_len) != constructor("c"^(max_len-1))
+    @test constructor("c"^(max_len-1)) != constructor("c"^max_len)
+    @test constructor("c"^max_len) != "c"^(max_len-1)
+    @test constructor("c"^(max_len-1)) != "c"^max_len
 end
 
 
@@ -52,6 +62,18 @@ basic_test(ShortString{MyUInt2048}, 254)
 @test ss7"ShrtStr" === ShortString7("ShrtStr")
 @test ss3"ss3" === ShortString3("ss3")
 
+
+@testset "equality of different sized ShortStrings" begin
+    @test ShortString15("ab") == ShortString3("ab")
+    @test ShortString3("ab") == ShortString15("ab")
+
+    @test ShortString30("x") != ShortString3("y")
+    @test ShortString30("y") != ShortString3("x")
+
+    # this one is too big to fit in the other
+    @test ShortString15("abcd") != ShortString3("ab")
+    @test ShortString3("ab") != ShortString15("abcd")
+end
 
 @testset "cmp" begin
     @test cmp(ShortString3("abc"), ShortString3("abc")) == 0
