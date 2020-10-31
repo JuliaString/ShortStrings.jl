@@ -105,3 +105,8 @@ end
 
     @test_throws ErrorException ShortString3(ShortString7("123456"))
 end
+
+@testset "promote rule" begin
+    @test vcat(ShortString3["ab", "cd"], ShortString7["abcd", "efgc"]) ==  vcat(ShortString3["ab", "cd"], ["abcd", "efgc"])
+    @test vcat(ShortString3["ab", "cd"], ShortString7["abcd", "efgc"]) ==  vcat(["ab", "cd"], ShortString7["abcd", "efgc"])
+end

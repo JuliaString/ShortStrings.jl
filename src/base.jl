@@ -104,7 +104,14 @@ function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
 end
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
-promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S} = ShortString{promote_rule(T,S)}
+
+function promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S}
+    if sizeof(T) >= sizeof(S)
+        return ShortString{promote_rule(T,S)}
+    else
+        return ShortString{promote_rule(S,T)}
+    end
+end
 
 size_content(s::ShortString) = s.size_content
 
