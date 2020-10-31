@@ -66,7 +66,7 @@ function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where S
 end
 function ==(s::ShortString, b::AbstractString)
     # Could be a string type that might not use UTF8 encoding and that we don't have a
-    # constructor for. Defer to equality that that type probably has defined on `String`
+    # constructor for. Defer to equality that type probably has defined on `String`
     return String(s) == b
 end
 
