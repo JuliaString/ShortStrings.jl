@@ -6,6 +6,7 @@ struct ShortString{T} <: AbstractString where T
     size_content::T
 end
 
+# check if a string of size `sz` can be stored in ShortString{T}`
 function check_size(T, sz)
     max_len = sizeof(T) - size_nibbles(T)  # the last few nibbles are is used to store the length
     if sz > max_len
