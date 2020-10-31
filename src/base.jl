@@ -1,6 +1,6 @@
 # this is for keeping the basic functionalities
 
-import Base:unsafe_getindex, ==, show, promote_rule, promote_eltype
+import Base:unsafe_getindex, ==, show, promote_rule
 
 struct ShortString{T} <: AbstractString where T
     size_content::T
