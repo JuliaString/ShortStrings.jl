@@ -74,3 +74,34 @@ basic_test(ShortString{MyUInt2048}, 254)
     @test ShortString15("abcd") != ShortString3("ab")
     @test ShortString3("ab") != ShortString15("abcd")
 end
+
+@testset "cmp" begin
+    @test cmp(ShortString3("abc"), ShortString3("abc")) == 0
+    @test cmp(ShortString3("ab"), ShortString3("abc")) == -1
+    @test cmp(ShortString3("abc"), ShortString3("ab")) == 1
+    @test cmp(ShortString3("ab"), ShortString3("ac")) == -1
+    @test cmp(ShortString3("ac"), ShortString3("ab")) == 1
+    @test cmp(ShortString3("α"), ShortString3("a")) == 1
+    @test cmp(ShortString3("b"), ShortString3("β")) == -1
+
+    @test cmp(ShortString3("abc"), "abc") == 0
+    @test cmp(ShortString3("ab"), "abc") == -1
+    @test cmp(ShortString3("abc"), "ab") == 1
+    @test cmp(ShortString3("ab"), "ac") == -1
+    @test cmp(ShortString3("ac"), "ab") == 1
+    @test cmp(ShortString3("α"), "a") == 1
+    @test cmp(ShortString3("b"), "β") == -1
+end
+
+@testset "Construction from other ShortStrings" begin
+    @test ShortString7(ShortString3("ab")) == "ab"
+    @test ShortString7(ShortString3("ab")) isa ShortString7
+
+    @test ShortString3(ShortString7("ab")) == "ab"
+    @test ShortString3(ShortString7("ab")) isa ShortString3
+
+    @test ShortString7(ShortString7("ab")) == "ab"
+    @test ShortString7(ShortString7("ab")) isa ShortString7
+
+    @test_throws ErrorException ShortString3(ShortString7("123456"))
+end
