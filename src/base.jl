@@ -21,7 +21,7 @@ function ShortString{T}(s::Union{String, SubString{String}}) where T
     # TODO some times this can throw errors for longish strings
     # Exception: EXCEPTION_ACCESS_VIOLATION at 0x1e0b7afd -- bswap at C:\Users\RTX2080\.julia\packages\BitIntegers\xU40U\src\BitIntegers.jl:332 [inlined]
     # ntoh at .\io.jl:541 [inlined]
-    content = (T(s |> pointer |> Ptr{T} |> Base.unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
+    content = (T(s |> pointer |> Ptr{T} |> Base.unsafe_load |> bswap) >> bits_to_wipe) << bits_to_wipe
     ShortString{T}(content | T(sz))
 end
 
@@ -33,12 +33,12 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     # S(size_mask(S)) will return a mask for getting the size for Shorting Strings in (content size)
     # format, so something like 00001111 in binary.
     #  ~S(size_mask(S))) will yield 11110000 which can be used as maks to extract the content
-    content = ntoh(T(ntoh(s.size_content & ~S(size_mask(S)))))
+    content = bswap(T(bswap(s.size_content & ~S(size_mask(S)))))
     ShortString{T}(content | T(sz))
 end
 
 
-String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
+String(s::ShortString) = String(reinterpret(UInt8, [bswap(s.size_content)])[1:sizeof(s)])
 
 Base.codeunit(s::ShortString) = UInt8
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
@@ -95,7 +95,7 @@ function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
     ncodeunits(a) == ncodeunits(b) || return false
     # compare if equal after dropping size bits and
     # flipping so that the empty bytes are at the start
-    ntoh(a.size_content & ~size_mask(A)) == ntoh(b.size_content & ~size_mask(B))
+    bswap(a.size_content & ~size_mask(A)) == bswap(b.size_content & ~size_mask(B))
 end
 
 
