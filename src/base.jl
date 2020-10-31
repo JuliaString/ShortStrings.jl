@@ -113,9 +113,6 @@ function promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S
     end
 end
 
-promote_eltype(::Vector{ShortString{T}}, ::Vector{ShortString{S}}) where {T,S} =
-    promote_rule(ShortString{T}, ShortString{S})
-
 size_content(s::ShortString) = s.size_content
 
 for T in (UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
