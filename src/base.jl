@@ -76,7 +76,7 @@ function ==(a::ShortString{S}, b::ShortString{S}) where S
 end
 function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
     ncodeunits(a) == ncodeunits(b) || return false
-    # compare if equal after droppign size bits and
+    # compare if equal after dropping size bits and
     # flipping so that the empty bytes are at the start
     ntoh(a.size_content & ~size_mask(A)) == ntoh(b.size_content & ~size_mask(B))
 end
