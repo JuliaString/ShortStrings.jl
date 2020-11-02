@@ -1,6 +1,9 @@
 # this is for keeping the basic functionalities
 
+using BitIntegers: @define_integers
+
 import Base: unsafe_getindex, ==, show, promote_rule
+using Base: @_inline_meta, @propagate_inbounds, @_propagate_inbounds_meta
 
 struct ShortString{T} <: AbstractString where {T}
     size_content::T
@@ -8,9 +11,9 @@ end
 
 # check if a string of size `sz` can be stored in ShortString{T}`
 function check_size(T, sz)
-    max_len = sizeof(T) - size_nibbles(T)  # the last few nibbles are is used to store the length
+    max_len = sizeof(T) - size_bytes(T)  # the last few nibbles are is used to store the length
     if sz > max_len
-        throw(ErrorException("sizeof(::ShortString) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
+        throw(ErrorException("sizeof(::$T) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
     end
 end
 
@@ -36,10 +39,10 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     sz = sizeof(s)
     check_size(T, sz)
     # Flip it so empty bytes are at start, grow/shrink it, flip it back
-    # S(size_mask(S)) will return a mask for getting the size for Shorting Strings in (content size)
+    # size_mask(S) will return a mask for getting the size for Shorting Strings in (content size)
     # format, so something like 00001111 in binary.
-    #  ~S(size_mask(S))) will yield 11110000 which can be used as maks to extract the content
-    content = ntoh(T(ntoh(s.size_content & ~S(size_mask(S)))))
+    #  ~size_mask(S) will yield 11110000 which can be used as maks to extract the content
+    content = ntoh(T(ntoh(s.size_content & ~size_mask(S))))
     ShortString{T}(content | T(sz))
 end
 
@@ -83,18 +86,13 @@ Base.show(io::IO, str::ShortString) = show(io, String(str))
     end
 end
 
+size_bytes(::Type{T}) where {T} = (count_ones(sizeof(T)-1)+7)>>3
 
-size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
-size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
-size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
-size_nibbles(::Type{<:Union{Int256, Int512, Int1024}}) = 2
-size_nibbles(::Type{T}) where {T} = ceil(log2(sizeof(T))/4)
-
-size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
+size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
 size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
-@inline function Base.isascii(s::ShortString{T}) where T
-    val = s.size_content << (8*size_nibbles(T))
+@inline function Base.isascii(s::ShortString{T}) where {T}
+    val = s.size_content << (8*size_bytes(T))
     for i in 1:sizeof(T)
         iszero(val & 0x80) || return false
         val <<= 8  # first byte never matters as will always be
@@ -124,18 +122,21 @@ function Base.length(s::ShortString{T}) where T
     return len
 end
 
-@inline function Base.iterate(s::ShortString{T}, i::Integer=1) where T
-    i > ncodeunits(s) && return nothing
-    shifted = s.size_content >> (8*(sizeof(T) - i))
-    if shifted % UInt8 <= 0x7f  # 1 byte character
-        return Char(shifted % UInt8), i+1
-    elseif shifted % UInt16 <= 0x7ff  # 2 byte character
-        return Char(shifted % UInt16 % UInt32), i+2
-    elseif shifted % UInt32 <= 0xffff  # 3 byte character
-        return Char(shifted % UInt32 & 0xffff), i+3
-    else  # 4 byte character
-        return Char(shifted % UInt32), i+4
-    end
+@inline _get_word(s::ShortString{T}, i::Int) where {T} =
+           (s.size_content >> (8*(sizeof(T) - i - 3)))%UInt32
+
+@inline function _get_char(str::ShortString, pos::Int)
+    chr = _get_word(str, pos)
+    typ = chr >>> 28
+    chr & ~ifelse(typ < 0x8, 0xffffff,
+                  ifelse(typ < 0xe, 0x00ffff,
+                         ifelse(typ < 0xf, 0x0000ff, 0x000000)))
+end
+
+@propagate_inbounds function Base.getindex(str::ShortString, pos::Int=1)
+    @_inline_meta()
+    @boundscheck checkbounds(str, pos)
+    reinterpret(Char, _get_char(str, pos))
 end
 
 function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where {S}
@@ -175,8 +176,10 @@ end
 
 size_content(s::ShortString) = s.size_content
 
-for T in (UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
-    max_len = sizeof(T) - size_nibbles(T)
+@define_integers 2048 Int2048 UInt2048
+
+for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
+    max_len = sizeof(T) - size_bytes(T)
     constructor_name = Symbol(:ShortString, max_len)
     macro_name = Symbol(:ss, max_len, :_str)
 
@@ -185,6 +188,14 @@ for T in (UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
         Expr(:call, $constructor_name, s)
     end
 end
+
+# These are simply for backwards compatibility reasons
+#const ss30_str = ss31_str
+#const ss62_str = ss63_str
+#const ss126_str = ss127_str
+const ShortString30  = ShortString31
+const ShortString62  = ShortString63
+const ShortString126 = ShortString127
 
 fsort(v::Vector{ShortString{T}}; rev = false) where {T} =
     sort(v, rev = rev, by = size_content, alg = RadixSort)

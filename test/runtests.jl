@@ -1,8 +1,7 @@
+using BitIntegers: UInt256, UInt512, UInt1024
 using ShortStrings
-using BitIntegers: UInt256, UInt512, UInt1024, @define_integers
+using ShortStrings: UInt2048
 using Test, Random
-
-include("getindex.jl")
 
 function basic_test(constructor, max_len)
     @testset "$constructor" begin
@@ -40,24 +39,29 @@ end
 basic_test(ShortString3, 3)
 basic_test(ShortString7, 7)
 basic_test(ShortString15, 15)
-basic_test(ShortString30, 30)
-basic_test(ShortString62, 62)
-basic_test(ShortString126, 126)
+basic_test(ShortString31, 31)
+basic_test(ShortString63, 63)
+basic_test(ShortString127, 127)
+basic_test(ShortString255, 255)
 
 basic_test(ShortString{UInt16}, 1)
 basic_test(ShortString{UInt32}, 3)
 basic_test(ShortString{UInt64}, 7)
 basic_test(ShortString{UInt128}, 15)
-basic_test(ShortString{UInt256}, 30)
-basic_test(ShortString{UInt512}, 62)
-basic_test(ShortString{UInt1024}, 126)
+basic_test(ShortString{UInt256}, 31)
+basic_test(ShortString{UInt512}, 63)
+basic_test(ShortString{UInt1024}, 127)
+basic_test(ShortString{UInt2048}, 255)
 
-@define_integers 2048 MyInt2048 MyUInt2048
-basic_test(ShortString{MyUInt2048}, 254)
+# getindex test
 
-@test ss126"Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long." === ShortString126("Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long.")
-@test ss62"Basically a failly long string really" === ShortString62("Basically a failly long string really")
-@test ss30"A Longer String!!!" === ShortString30("A Longer String!!!")
+s = "∫x ∂x"
+ss = ShortString15(s)
+@test s[1] == ss[1]
+
+@test ss127"Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long." === ShortString127("Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long.")
+@test ss63"Basically a failly long string really" === ShortString63("Basically a failly long string really")
+@test ss31"A Longer String!!!" === ShortString31("A Longer String!!!")
 
 @test ss15"Short String!!!" === ShortString15("Short String!!!")
 @test ss7"ShrtStr" === ShortString7("ShrtStr")
@@ -68,8 +72,8 @@ basic_test(ShortString{MyUInt2048}, 254)
     @test ShortString15("ab") == ShortString3("ab")
     @test ShortString3("ab") == ShortString15("ab")
 
-    @test ShortString30("x") != ShortString3("y")
-    @test ShortString30("y") != ShortString3("x")
+    @test ShortString31("x") != ShortString3("y")
+    @test ShortString31("y") != ShortString3("x")
 
     # this one is too big to fit in the other
     @test ShortString15("abcd") != ShortString3("ab")
