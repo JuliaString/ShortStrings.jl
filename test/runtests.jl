@@ -112,4 +112,4 @@ end
 end
 
 # Iterations
-@test collect(ShortString15("x∫yâz")) == [`x`,`∫`,`y`,`â`,`z`]
+@test collect(ShortString15("x∫yâz")) == ['x','∫','y','â','z']

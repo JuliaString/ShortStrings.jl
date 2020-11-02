@@ -55,6 +55,7 @@ Base.convert(::ShortString{T}, s::String) where {T} = ShortString{T}(s)
 Base.convert(::String, ss::ShortString) = String(ss)
 
 Base.sizeof(s::ShortString{T}) where {T} = Int(s.size_content & (size_mask(s) % UInt))
+
 Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
@@ -68,15 +69,20 @@ Base.show(io::IO, str::ShortString) = show(io, String(str))
            (s.size_content >> (8*(sizeof(T) - i - 3)))%UInt32
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
-       0 < i <= ncodeunits(s) || return nothing
-       chr = _get_word(s, i)
-       chr < 0x8000_0000 ? (reinterpret(Char, chr & 0xFF00_0000), i + 1) :
-           chr < 0xe000_0000 ? (reinterpret(Char, chr & 0xFFFF_0000), i + 2) :
-           chr < 0xf000_0000 ? (reinterpret(Char, chr & 0xFFFF_FF00), i + 3) :
-           (reinterpret(Char, chr), i + 4)
+    0 < i <= ncodeunits(s) || return nothing
+    chr = _get_word(s, i)
+    typ = chr >>> 24
+    if typ < 0x80
+        (reinterpret(Char, chr & 0xFF00_0000), i + 1)
+    elseif typ < 0xe0
+        (reinterpret(Char, chr & 0xFFFF_0000), i + 2)
+    elseif typ < 0xf0
+        (reinterpret(Char, chr & 0xFFFF_FF00), i + 3)
+    else
+        (reinterpret(Char, chr), i + 4)
+    end
 end
 
-Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & (size_mask(s) % UInt))
 size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
 size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
 size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
