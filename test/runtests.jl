@@ -25,14 +25,19 @@ function basic_test(string_type, constructor, max_len)
     @test_throws ErrorException constructor("a"^(max_len+1))
 
     # equality
-    @test constructor("c"^max_len) == "c"^max_len
-    @test "c"^max_len == constructor("c"^max_len)
-    @test constructor("c"^max_len) == constructor("c"^max_len)
-    @test constructor("c"^max_len) != constructor("d"^max_len)
-    @test constructor("c"^max_len) != constructor("c"^(max_len-1))
-    @test constructor("c"^(max_len-1)) != constructor("c"^max_len)
-    @test constructor("c"^max_len) != "c"^(max_len-1)
-    @test constructor("c"^(max_len-1)) != "c"^max_len
+    str_maxlen = "c"^max_len
+    str_maxlen_m_1 = "c"^(max_len-1)
+    short_maxlen = constructor(str_maxlen)
+    short_maxlen_m_1 = constructor(str_maxlen_m_1)
+
+    @test short_maxlen == str_maxlen
+    @test str_maxlen == short_maxlen
+    @test short_maxlen == short_maxlen
+    @test short_maxlen != constructor("d"^max_len)
+    @test short_maxlen != short_maxlen_m_1
+    @test short_maxlen_m_1 != short_maxlen
+    @test short_maxlen != str_maxlen_m_1
+    @test short_maxlen_m_1 != str_maxlen
 end
 
 
@@ -118,4 +123,3 @@ end
 
 # Iterations
 @test collect(ShortString15("x∫yâz")) == ['x','∫','y','â','z']
-

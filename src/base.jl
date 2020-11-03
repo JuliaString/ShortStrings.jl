@@ -11,7 +11,7 @@ end
 
 # check if a string of size `sz` can be stored in ShortString{T}`
 function check_size(T, sz)
-    max_len = sizeof(T) - size_bytes(T)  # the last few nibbles are is used to store the length
+    max_len = sizeof(T) - size_bytes(T)  # the last few bytes are is used to store the length
     if sz > max_len
         throw(ErrorException("sizeof(::$T) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
     end
@@ -64,12 +64,17 @@ Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
-Base.display(s::ShortString) = display(String(s))
-Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
 
-@inline _get_word(s::ShortString{T}, i::Int) where {T} =
-           (s.size_content >> (8*(sizeof(T) - i - 3)))%UInt32
+@inline function _get_word(s::ShortString{T}, i::Int) where {T}
+    sz = sizeof(T)
+    if sz <= 4
+        # Shift up by 0-3 bytes
+        (s.size_content%UInt32) << (8*(i + 3 - sz))
+    else
+        (s.size_content >>> (8*(sz - i - 3)))%UInt32
+    end
+end
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
     0 < i <= ncodeunits(s) || return nothing
@@ -92,10 +97,10 @@ size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
 size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
 @inline function Base.isascii(s::ShortString{T}) where {T}
-    val = s.size_content << (8*size_bytes(T))
-    for i in 1:sizeof(T)
+    val = s.size_content >>> (8*size_bytes(T))
+    for i in 1:(sizeof(T)-size_bytes(T))
         iszero(val & 0x80) || return false
-        val <<= 8  # first byte never matters as will always be
+        val >>>= 8
     end
     return true
 end
@@ -107,7 +112,7 @@ function Base.length(s::ShortString{T}) where T
     i = 0
     len = 0
     while i < ncodeunits(s)
-        shifted = s.size_content >> (8*(sizeof(T) - i))
+        shifted = s.size_content >>> (8*(sizeof(T) - i))
         i += if shifted % UInt8 <= 0x7f  # 1 byte character
             1
         elseif shifted % UInt16 <= 0x7ff  # 2 byte character
@@ -121,9 +126,6 @@ function Base.length(s::ShortString{T}) where T
     end
     return len
 end
-
-@inline _get_word(s::ShortString{T}, i::Int) where {T} =
-           (s.size_content >> (8*(sizeof(T) - i - 3)))%UInt32
 
 @inline function _get_char(str::ShortString, pos::Int)
     chr = _get_word(str, pos)
@@ -190,9 +192,9 @@ for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
 end
 
 # These are simply for backwards compatibility reasons
-#const ss30_str = ss31_str
-#const ss62_str = ss63_str
-#const ss126_str = ss127_str
+const var"@ss30_str" = var"@ss31_str"
+const var"@ss62_str" = var"@ss63_str"
+const var"@ss126_str" = var"@ss127_str"
 const ShortString30  = ShortString31
 const ShortString62  = ShortString63
 const ShortString126 = ShortString127
