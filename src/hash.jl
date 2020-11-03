@@ -1,5 +1,6 @@
-export hash
+using MurmurHash3: mmhash128_a
 
-import Base.hash
-
-Base.hash(x::ShortString, h::UInt) = hash(String(x), h)
+function Base.hash(x::ShortString, h::UInt)
+    h += Base.memhash_seed
+    last(mmhash128_a(sizeof(x), bswap(x.size_content), h%UInt32)) + h
+end

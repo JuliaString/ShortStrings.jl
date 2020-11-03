@@ -1,7 +1,8 @@
 # this is for keeping the basic functionalities
-import Base:unsafe_getindex, ==, show, promote_rule
 
-struct ShortString{T} <: AbstractString where T
+import Base: unsafe_getindex, ==, show, promote_rule
+
+struct ShortString{T} <: AbstractString where {T}
     size_content::T
 end
 
@@ -13,10 +14,16 @@ function check_size(T, sz)
     end
 end
 
-function ShortString{T}(s::Union{String, SubString{String}}) where T
+function ShortString{T}(s::Union{String, SubString{String}}) where {T}
     sz = sizeof(s)
     check_size(T, sz)
     bits_to_wipe = 8(sizeof(T) - sz)
+
+    # Warning: if a SubString is at the very end of a string, which is at the end of allocated
+    # memory, this can cause an access violation, by trying to access past the end
+    # (for example, reading a 1 byte substring at the end of a length 119 string, could go past
+    # the end)
+
     # TODO some times this can throw errors for longish strings
     # Exception: EXCEPTION_ACCESS_VIOLATION at 0x1e0b7afd -- bswap at C:\Users\RTX2080\.julia\packages\BitIntegers\xU40U\src\BitIntegers.jl:332 [inlined]
     # ntoh at .\io.jl:541 [inlined]
@@ -24,7 +31,7 @@ function ShortString{T}(s::Union{String, SubString{String}}) where T
     ShortString{T}(content | T(sz))
 end
 
-ShortString{T}(s::ShortString{T}) where T = s
+ShortString{T}(s::ShortString{T}) where {T} = s
 function ShortString{T}(s::ShortString{S}) where {T, S}
     sz = sizeof(s)
     check_size(T, sz)
@@ -43,26 +50,48 @@ Base.codeunit(s::ShortString) = UInt8
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
 Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
 Base.codeunits(s::ShortString) = codeunits(String(s))
-Base.convert(::ShortString{T}, s::String) where T = ShortString{T}(s)
+
+Base.convert(::ShortString{T}, s::String) where {T} = ShortString{T}(s)
 Base.convert(::String, ss::ShortString) = String(ss)
-Base.display(s::ShortString) = display(String(s))
+
+Base.sizeof(s::ShortString{T}) where {T} = Int(s.size_content & (size_mask(s) % UInt))
+
 Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
+
+Base.display(s::ShortString) = display(String(s))
 Base.print(s::ShortString) = print(String(s))
 Base.show(io::IO, str::ShortString) = show(io, String(str))
-Base.sizeof(s::ShortString{T}) where T = Int(s.size_content & (size_mask(s) % UInt))
+
+@inline _get_word(s::ShortString{T}, i::Int) where {T} =
+           (s.size_content >> (8*(sizeof(T) - i - 3)))%UInt32
+
+@inline function Base.iterate(s::ShortString, i::Int=1)
+    0 < i <= ncodeunits(s) || return nothing
+    chr = _get_word(s, i)
+    typ = chr >>> 24
+    if typ < 0x80
+        (reinterpret(Char, chr & 0xFF00_0000), i + 1)
+    elseif typ < 0xe0
+        (reinterpret(Char, chr & 0xFFFF_0000), i + 2)
+    elseif typ < 0xf0
+        (reinterpret(Char, chr & 0xFFFF_FF00), i + 3)
+    else
+        (reinterpret(Char, chr), i + 4)
+    end
+end
 
 
 size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
 size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
 size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
 size_nibbles(::Type{<:Union{Int256, Int512, Int1024}}) = 2
-size_nibbles(::Type{T}) where T = ceil(log2(sizeof(T))/4)
+size_nibbles(::Type{T}) where {T} = ceil(log2(sizeof(T))/4)
 
 size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
-size_mask(s::ShortString{T}) where T = size_mask(T)
+size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
 @inline function Base.isascii(s::ShortString{T}) where T
     val = s.size_content << (8*size_nibbles(T))
@@ -109,7 +138,7 @@ end
     end
 end
 
-function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where S
+function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where {S}
     ncodeunits(b) == ncodeunits(s) || return false
     return s == ShortString{S}(b)
 end
@@ -120,7 +149,7 @@ function ==(s::ShortString, b::AbstractString)
 end
 
 ==(a::AbstractString, b::ShortString) = b == a
-function ==(a::ShortString{S}, b::ShortString{S}) where S
+function ==(a::ShortString{S}, b::ShortString{S}) where {S}
     return a.size_content == b.size_content
 end
 function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
@@ -130,21 +159,11 @@ function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
     ntoh(a.size_content & ~size_mask(A)) == ntoh(b.size_content & ~size_mask(B))
 end
 
-
-function Base.cmp(a::ShortString{S}, b::ShortString{S}) where S
+function Base.cmp(a::ShortString{S}, b::ShortString{S}) where {S}
     return cmp(a.size_content, b.size_content)
 end
 
-#= While this works it is slower than converting to a String
-using MurmurHash3: mmhash128_c
-function Base.hash(s::ShortString, h::UInt)
-    h += Base.memhash_seed
-    mmhash128_c(s, h % UInt32)[2] + h
-end
-=#
-
-
-promote_rule(::Type{String}, ::Type{ShortString{S}}) where S = String
+promote_rule(::Type{String}, ::Type{ShortString{S}}) where {S} = String
 
 function promote_rule(::Type{ShortString{T}}, ::Type{ShortString{S}}) where {T,S}
     if sizeof(T) >= sizeof(S)
@@ -167,7 +186,9 @@ for T in (UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
     end
 end
 
-fsort(v::Vector{ShortString{T}}; rev = false) where T = sort(v, rev = rev, by = size_content, alg = RadixSort)
-fsort!(v::Vector{ShortString{T}}; rev = false) where T = sort!(v, rev = rev, by = size_content, alg = RadixSort)
+fsort(v::Vector{ShortString{T}}; rev = false) where {T} =
+    sort(v, rev = rev, by = size_content, alg = RadixSort)
+fsort!(v::Vector{ShortString{T}}; rev = false) where {T} =
+    sort!(v, rev = rev, by = size_content, alg = RadixSort)
 
-fsortperm(v::Vector{ShortString{T}}; rev = false) where T = sortperm(v, rev = rev)
+fsortperm(v::Vector{ShortString{T}}; rev = false) where {T} = sortperm(v, rev = rev)
