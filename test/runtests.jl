@@ -110,3 +110,6 @@ end
     @test vcat(ShortString3["ab", "cd"], ShortString7["abcd", "efgc"]) ==  vcat(ShortString3["ab", "cd"], ["abcd", "efgc"])
     @test vcat(ShortString3["ab", "cd"], ShortString7["abcd", "efgc"]) ==  vcat(["ab", "cd"], ShortString7["abcd", "efgc"])
 end
+
+# Iterations
+@test collect(ShortString15("x∫yâz")) == ['x','∫','y','â','z']
