@@ -11,7 +11,7 @@ end
 
 # check if a string of size `sz` can be stored in ShortString{T}`
 function check_size(T, sz)
-    max_len = sizeof(T) - size_bytes(T)  # the last few bytes are is used to store the length
+    max_len = sizeof(T) - size_bytes(T)  # the last few bytes are used to store the length
     if sz > max_len
         throw(ErrorException("sizeof(::$T) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
     end
@@ -41,7 +41,7 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     # Flip it so empty bytes are at start, grow/shrink it, flip it back
     # size_mask(S) will return a mask for getting the size for Shorting Strings in (content size)
     # format, so something like 00001111 in binary.
-    #  ~size_mask(S) will yield 11110000 which can be used as maks to extract the content
+    #  ~size_mask(S) will yield 11110000 which can be used as a mask to extract the content
     content = ntoh(T(ntoh(s.size_content & ~size_mask(S))))
     ShortString{T}(content | T(sz))
 end
@@ -190,14 +190,6 @@ for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
         Expr(:call, $constructor_name, s)
     end
 end
-
-# These are simply for backwards compatibility reasons
-const var"@ss30_str" = var"@ss31_str"
-const var"@ss62_str" = var"@ss63_str"
-const var"@ss126_str" = var"@ss127_str"
-const ShortString30  = ShortString31
-const ShortString62  = ShortString63
-const ShortString126 = ShortString127
 
 fsort(v::Vector{ShortString{T}}; rev = false) where {T} =
     sort(v, rev = rev, by = size_content, alg = RadixSort)
