@@ -8,6 +8,5 @@ export fsort, fsort!, ShortString,
     @ss3_str, @ss7_str, @ss15_str, @ss30_str, @ss62_str, @ss126_str
 
 include("base.jl")
-include("hash.jl")
 
 end # module

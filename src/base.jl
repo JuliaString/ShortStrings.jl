@@ -83,6 +83,7 @@ Base.show(io::IO, str::ShortString) = show(io, String(str))
     end
 end
 
+
 size_nibbles(::Type{<:Union{UInt16, UInt32, UInt64, UInt128}}) = 1
 size_nibbles(::Type{<:Union{Int16, Int32, Int64, Int128}}) = 1
 size_nibbles(::Type{<:Union{UInt256, UInt512, UInt1024}}) = 2
@@ -92,16 +93,50 @@ size_nibbles(::Type{T}) where {T} = ceil(log2(sizeof(T))/4)
 size_mask(T) = T(exp2(4*size_nibbles(T)) - 1)
 size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
+@inline function Base.isascii(s::ShortString{T}) where T
+    val = s.size_content << (8*size_nibbles(T))
+    for i in 1:sizeof(T)
+        iszero(val & 0x80) || return false
+        val <<= 8  # first byte never matters as will always be
+    end
+    return true
+end
 
-# function Base.getindex(s::ShortString, i::Integer)
-#     getindex(String(s), i)
-# end
+function Base.length(s::ShortString{T}) where T
+    isascii(s) && return ncodeunits(s)
 
-# function Base.getindex(s::ShortString, args...; kwargs...)
-#     getindex(String(s), args...; kwargs...)
-# end
+    # else have to do it the hard way:
+    i = 0
+    len = 0
+    while i < ncodeunits(s)
+        shifted = s.size_content >> (8*(sizeof(T) - i))
+        i += if shifted % UInt8 <= 0x7f  # 1 byte character
+            1
+        elseif shifted % UInt16 <= 0x7ff  # 2 byte character
+            2
+        elseif shifted % UInt32 <= 0xffff  # 3 byte character
+            3
+        else  # 4 byte character
+            4
+        end
+        len += 1
+    end
+    return len
+end
 
-Base.collect(s::ShortString) = collect(String(s))
+@inline function Base.iterate(s::ShortString{T}, i::Integer=1) where T
+    i > ncodeunits(s) && return nothing
+    shifted = s.size_content >> (8*(sizeof(T) - i))
+    if shifted % UInt8 <= 0x7f  # 1 byte character
+        return Char(shifted % UInt8), i+1
+    elseif shifted % UInt16 <= 0x7ff  # 2 byte character
+        return Char(shifted % UInt16 % UInt32), i+2
+    elseif shifted % UInt32 <= 0xffff  # 3 byte character
+        return Char(shifted % UInt32 & 0xffff), i+3
+    else  # 4 byte character
+        return Char(shifted % UInt32), i+4
+    end
+end
 
 function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where {S}
     ncodeunits(b) == ncodeunits(s) || return false
