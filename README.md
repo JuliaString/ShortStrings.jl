@@ -1,11 +1,10 @@
 ## ShortStrings
 This is an efficient string format for storing strings using integer types. For example, `UInt32` can hold 3 bytes of string with 1 byte to record the size of the string and a `UInt128` can hold a byte string with 1 byte to record the size of the string.
 
-Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package support string with up to 126 bytes in size.
+Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package support string with up to 255 bytes in size.
 
 ## Quick Start
-````julia
-
+```julia
 using ShortStrings
 
 using SortingAlgorithms
@@ -28,14 +27,24 @@ ShortString3(randstring(3))
 s15 = ss15"A short string"  # ShortString15 === ShortString{Int128}
 s7 = ss7"shorter"           # ShortString7 === ShortString{Int64}
 s3 = ss3"srt"               # ShortString3 === ShortString{Int32}
-````
 
+# The ShortString constructor can automatically select the shortest size that a string will fit in
+ShortString("This is a long string")
 
-````
-0.305076 seconds (9 allocations: 11.445 MiB)
-  0.166334 seconds (259.04 k allocations: 44.419 MiB)
-"srt"
-````
+# The maximum length can also be added:
+ShortString("Foo", 15)
+
+# The `ss` macro will also select the shortest size that will fit
+s31 = ss"This also is a long string"
+```
+
+```
+0.364908 seconds (126 allocations: 11.450 MiB, 18.42% gc time, 0.58% comp
+ilation time)
+  0.272636 seconds (742.25 k allocations: 74.315 MiB, 72.72% compilation ti
+me)
+"This als\n-m\x0e\$\x8cm\ue865́\x84\xb1ͽ\xb4\xb4"
+```
 
 
 
@@ -43,8 +52,7 @@ s3 = ss3"srt"               # ShortString3 === ShortString{Int32}
 
 ## Benchmarks
 
-````julia
-
+```julia
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
 N = Int(1e6);
 svec = [randstring(rand(1:15)) for i=1:N];
@@ -59,7 +67,6 @@ sort(ssvec, by = x->x.size_content, alg=RadixSort)
 using RCall
 @rput svec;
 r_timings = R"""
-memory.limit(2^31-1)
 replicate($(length(short_radixsort.times)), system.time(sort(svec, method="radix"))[3])
 """;
 
@@ -68,13 +75,16 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     mean.([basesort.times./1e9, radixsort_timings.times./1e9, short_radixsort.times./1e9, r_timings]),
     title="String sort performance - len: 1m, variable size 15",
     label = "seconds")
-````
+```
+
+```
+Error: Failed to precompile RCall [6f49c342-dc21-5d91-9882-a32aef131414] to
+ /Users/scott/.julia/compiled/v1.6/RCall/jl_qGsa5M.
+```
 
 
-![](figures/README_2_1.png)
 
-````julia
-
+```julia
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
 N = Int(1e6);
 svec = rand([randstring(rand(1:15)) for i=1:N÷100],N)
@@ -96,10 +106,14 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     mean.([basesort.times./1e9, radixsort_timings.times./1e9, short_radixsort.times./1e9, r_timings]),
     title="String sort performance - len: $(N÷1_000_000)m, fixed size: 15",
     label = "seconds")
-````
+```
+
+```
+Error: Failed to precompile RCall [6f49c342-dc21-5d91-9882-a32aef131414] to
+ /Users/scott/.julia/compiled/v1.6/RCall/jl_dusAht.
+```
 
 
-![](figures/README_3_1.png)
 
 
 
@@ -108,8 +122,12 @@ This is based on the discussion [here](https://discourse.julialang.org/t/progres
 
 # Build Status
 
-[![Build Status](https://travis-ci.org/xiaodaigh/ShortStrings.jl.svg?branch=master)](https://travis-ci.org/xiaodaigh/ShortStrings.jl)
+[contrib]:     https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
+[travis-url]:  https://travis-ci.org/JuliaString/ShortStrings.jl
+[travis-img]:  https://travis-ci.org/JuliaString/ShortStrings.jl.svg?branch=master
+[codecov-url]:  https://codecov.io/gh/JuliaString/ShortStrings.jl?branch=master
+[codecov-img]:  https://codecov.io/gh/JuliaString/ShortStrings.jl/branch/master/graph/badge.svg
 
-[![Coverage Status](https://coveralls.io/repos/xiaodaigh/ShortStrings.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/xiaodaigh/ShortStrings.jl?branch=master)
-
-[![codecov.io](http://codecov.io/github/xiaodaigh/ShortStrings.jl/coverage.svg?branch=master)](http://codecov.io/github/xiaodaigh/ShortStrings.jl?branch=master)
+[![contributions welcome][contrib]](https://github.com/JuliaString/Strs.jl/issues)
+[![][travis-img]][travis-url]
+[![][codecov-img]][codecov-url]

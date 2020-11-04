@@ -31,7 +31,33 @@ const CHUNKSZ   = sizeof(UInt)
 """The number of bits in the chunk type used to process String values"""
 const CHUNKBITS = sizeof(UInt) == 4 ? 32 : 64
 
-"""Given a String and it's size in bytes, load it into a value of type T"""
+"""Internal function to pick up a byte at the given index in a ShortString"""
+@inline _get_byte(s::ShortString, i::Int) = (s.size_content >>> (8*(sizeof(s) - i)))%UInt8
+
+"""
+Internal function to pick up a UInt32 (i.e. to contain 1 Char) at the given index
+in a ShortString
+"""
+@inline function _get_word(s::ShortString{T}, i::Int) where {T}
+    sz = sizeof(T)
+    if sz <= 4
+        # Shift up by 0-3 bytes
+        (s.size_content%UInt32) << (8*(i + 3 - sz))
+    else
+        (s.size_content >>> (8*(sz - i - 3)))%UInt32
+    end
+end
+
+"""Internal function to get the UInt32 representation of a Char from an index in a ShortString"""
+@inline function _get_char(str::ShortString, pos::Int)
+    chr = _get_word(str, pos)
+    typ = chr >>> 28
+    chr & ~ifelse(typ < 0x8, 0xffffff,
+                  ifelse(typ < 0xe, 0x00ffff,
+                         ifelse(typ < 0xf, 0x0000ff, 0x000000)))
+end
+
+"""Internal function, given a String and it's size in bytes, load it into a value of type T"""
 @inline function _ss(::Type{T}, str::String, sz) where {T}
     if sizeof(T) <= sizeof(UInt)
         unsafe_load(reinterpret(Ptr{T}, pointer(str)))
@@ -96,7 +122,7 @@ function String(s::ShortString{T}) where {T}
     pnt = reinterpret(Ptr{UInt}, pointer(sv))
     for i = 1:(len + sizeof(UInt) - 1) >>> SHFT_INT
         unsafe_store!(pnt, val % UInt)
-        val >>>= SHFT_INT
+        val >>>= 8*sizeof(UInt)
         pnt += sizeof(UInt)
     end
     String(sv)
@@ -113,25 +139,11 @@ Base.convert(::String, ss::ShortString) = String(ss)
 Base.sizeof(s::ShortString) = Int(s.size_content & size_mask(s))
 
 Base.firstindex(::ShortString) = 1
-Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
-Base.show(io::IO, str::ShortString) = show(io, String(str))
-
-"""
-Internal function to pick up a UInt32 (i.e. to contain 1 Char) at the given index
-in a ShortString
-"""
-@inline function _get_word(s::ShortString{T}, i::Int) where {T}
-    sz = sizeof(T)
-    if sz <= 4
-        # Shift up by 0-3 bytes
-        (s.size_content%UInt32) << (8*(i + 3 - sz))
-    else
-        (s.size_content >>> (8*(sz - i - 3)))%UInt32
-    end
-end
+# Checks top two bits of first byte of character to see if valid position
+isvalid(s::String, i::Integer) = (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) != 0x80)
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
     0 < i <= ncodeunits(s) || return nothing
@@ -177,15 +189,6 @@ function Base.length(s::ShortString{T}) where T
         len += 1
     end
     return len
-end
-
-"""Internal function to get the UInt32 representation of a Char from an index in a ShortString"""
-@inline function _get_char(str::ShortString, pos::Int)
-    chr = _get_word(str, pos)
-    typ = chr >>> 28
-    chr & ~ifelse(typ < 0x8, 0xffffff,
-                  ifelse(typ < 0xe, 0x00ffff,
-                         ifelse(typ < 0xf, 0x0000ff, 0x000000)))
 end
 
 @propagate_inbounds function Base.getindex(str::ShortString, pos::Int=1)

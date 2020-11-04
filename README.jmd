@@ -95,8 +95,12 @@ This is based on the discussion [here](https://discourse.julialang.org/t/progres
 
 # Build Status
 
-[![Build Status](https://travis-ci.org/xiaodaigh/ShortStrings.jl.svg?branch=master)](https://travis-ci.org/xiaodaigh/ShortStrings.jl)
+[contrib]:     https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
+[travis-url]:  https://travis-ci.org/JuliaString/ShortStrings.jl
+[travis-img]:  https://travis-ci.org/JuliaString/ShortStrings.jl.svg?branch=master
+[codecov-url]:  https://codecov.io/gh/JuliaString/ShortStrings.jl?branch=master
+[codecov-img]:  https://codecov.io/gh/JuliaString/ShortStrings.jl/branch/master/graph/badge.svg
 
-[![Coverage Status](https://coveralls.io/repos/xiaodaigh/ShortStrings.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/xiaodaigh/ShortStrings.jl?branch=master)
-
-[![codecov.io](http://codecov.io/github/xiaodaigh/ShortStrings.jl/coverage.svg?branch=master)](http://codecov.io/github/xiaodaigh/ShortStrings.jl?branch=master)
+[![contributions welcome][contrib]](https://github.com/JuliaString/Strs.jl/issues)
+[![][travis-img]][travis-url]
+[![][codecov-img]][codecov-url]
