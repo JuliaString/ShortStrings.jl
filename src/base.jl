@@ -221,7 +221,9 @@ size_content(s::ShortString) = s.size_content
 
 @define_integers 2048 Int2048 UInt2048
 
-for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
+const def_types = [UInt32, UInt64, UInt128, UInt256, UInt512, UInt1024, UInt2048]
+
+for T in def_types
     max_len = sizeof(T) - size_bytes(T)
     constructor_name = Symbol(:ShortString, max_len)
     macro_name = Symbol(:ss, max_len, :_str)
@@ -230,6 +232,20 @@ for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
     @eval macro $(macro_name)(s)
         Expr(:call, $constructor_name, s)
     end
+end
+
+function get_type(maxlen; types=def_types)
+    for T in types
+        maxlen <= sizeof(T) - size_bytes(T) && return ShortString{T}
+    end
+    throw(ArgumentError("$maxlen is too large to fit into any of the provided types: $types"))
+end
+
+ShortString(str::Union{String,SubString{String}}, maxlen = 0; types=def_types) =
+    get_type(maxlen <= 0 ? sizeof(str) : maxlen, types=types)(str)
+
+macro ss_str(str, max="0")
+    :( ShortString($str, $(parse(Int, max))) )
 end
 
 fsort(v::Vector{ShortString{T}}; rev = false) where {T} =
