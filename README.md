@@ -39,11 +39,11 @@ s31 = ss"This also is a long string"
 ```
 
 ```
-0.364908 seconds (126 allocations: 11.450 MiB, 18.42% gc time, 0.58% comp
+0.386383 seconds (126 allocations: 11.450 MiB, 18.62% gc time, 0.59% comp
 ilation time)
-  0.272636 seconds (742.25 k allocations: 74.315 MiB, 72.72% compilation ti
+  0.279547 seconds (742.26 k allocations: 74.320 MiB, 70.85% compilation ti
 me)
-"This als\n-m\x0e\$\x8cm\ue865́\x84\xb1ͽ\xb4\xb4"
+"This also is a long string"
 ```
 
 
@@ -77,12 +77,7 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     label = "seconds")
 ```
 
-```
-Error: Failed to precompile RCall [6f49c342-dc21-5d91-9882-a32aef131414] to
- /Users/scott/.julia/compiled/v1.6/RCall/jl_qGsa5M.
-```
-
-
+![](figures/README_2_1.png)
 
 ```julia
 using SortingLab, ShortStrings, SortingAlgorithms, BenchmarkTools;
@@ -108,12 +103,7 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
     label = "seconds")
 ```
 
-```
-Error: Failed to precompile RCall [6f49c342-dc21-5d91-9882-a32aef131414] to
- /Users/scott/.julia/compiled/v1.6/RCall/jl_dusAht.
-```
-
-
+![](figures/README_3_1.png)
 
 
 
