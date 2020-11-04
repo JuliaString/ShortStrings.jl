@@ -4,6 +4,7 @@ using BitIntegers: @define_integers
 
 import Base: unsafe_getindex, ==, show, promote_rule
 using Base: @_inline_meta, @propagate_inbounds, @_propagate_inbounds_meta
+import Base.GC: @preserve
 
 struct ShortString{T} <: AbstractString where {T}
     size_content::T
@@ -17,24 +18,54 @@ function check_size(T, sz)
     end
 end
 
-function ShortString{T}(s::Union{String, SubString{String}}) where {T}
+size_bytes(::Type{T}) where {T} = (count_ones(sizeof(T)-1)+7)>>3
+
+size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
+size_mask(s::ShortString{T}) where {T} = size_mask(T)
+
+const CHUNKSZ   = sizeof(UInt)
+const CHUNKBITS = sizeof(UInt) == 4 ? 32 : 64
+
+@inline function _ss(::Type{T}, str::String, sz) where {T}
+    if sizeof(T) <= sizeof(UInt)
+        unsafe_load(reinterpret(Ptr{T}, pointer(str)))
+    else
+        pnt = reinterpret(Ptr{UInt}, pointer(str))
+        fin = pnt + sz
+        val = T(unsafe_load(pnt))
+        off = CHUNKBITS
+        while (pnt += CHUNKSZ) <= fin
+            val |= T(unsafe_load(pnt)) << off
+            off += CHUNKBITS
+        end
+        val
+    end
+end
+
+# This can be optimized later, right now, it's just working 1 byte at a time
+# to avoid accessing past the end
+@inline function _ss(::Type{T}, str::SubString{String}, sz) where {T}
+    pnt = pointer(str)
+    fin = pnt + sz
+    val = T(unsafe_load(pnt))
+    off = 8
+    while (pnt += 1) <= fin
+        val |= T(unsafe_load(pnt)) << off
+        off += 8
+    end
+    val
+end
+
+function ShortString{T}(s::Union{String,SubString{String}}) where {T}
     sz = sizeof(s)
+    sz === 0 && return ShortString{T}(T(0))
     check_size(T, sz)
-    bits_to_wipe = 8(sizeof(T) - sz)
-
-    # Warning: if a SubString is at the very end of a string, which is at the end of allocated
-    # memory, this can cause an access violation, by trying to access past the end
-    # (for example, reading a 1 byte substring at the end of a length 119 string, could go past
-    # the end)
-
-    # TODO some times this can throw errors for longish strings
-    # Exception: EXCEPTION_ACCESS_VIOLATION at 0x1e0b7afd -- bswap at C:\Users\RTX2080\.julia\packages\BitIntegers\xU40U\src\BitIntegers.jl:332 [inlined]
-    # ntoh at .\io.jl:541 [inlined]
-    content = (T(s |> pointer |> Ptr{T} |> unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
-    ShortString{T}(content | T(sz))
+    bw = 8(sizeof(T) - sz)
+    @preserve s ShortString{T}((ntoh(_ss(T, s, sz)) >>> bw) << bw | T(sz))
 end
 
 ShortString{T}(s::ShortString{T}) where {T} = s
+
 function ShortString{T}(s::ShortString{S}) where {T, S}
     sz = sizeof(s)
     check_size(T, sz)
@@ -72,7 +103,7 @@ Base.codeunits(s::ShortString) = codeunits(String(s))
 Base.convert(::ShortString{T}, s::String) where {T} = ShortString{T}(s)
 Base.convert(::String, ss::ShortString) = String(ss)
 
-Base.sizeof(s::ShortString{T}) where {T} = Int(s.size_content & (size_mask(s) % UInt))
+Base.sizeof(s::ShortString) = Int(s.size_content & size_mask(s))
 
 Base.firstindex(::ShortString) = 1
 Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
@@ -105,11 +136,6 @@ end
         (reinterpret(Char, chr), i + 4)
     end
 end
-
-size_bytes(::Type{T}) where {T} = (count_ones(sizeof(T)-1)+7)>>3
-
-size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
-size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
 @inline function Base.isascii(s::ShortString{T}) where {T}
     val = s.size_content >>> (8*size_bytes(T))
