@@ -1,7 +1,6 @@
 # Weave readme
 using Pkg
-cd("c:/git/ShortStrings/")
-Pkg.activate("c:/git/ShortStrings/readme-env")
+Pkg.activate("./readme-env")
 
 using Weave
 

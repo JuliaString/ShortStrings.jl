@@ -10,7 +10,7 @@ struct ShortString{T} <: AbstractString where {T}
     size_content::T
 end
 
-# check if a string of size `sz` can be stored in ShortString{T}`
+"""Check if a string of size `sz` can be stored in ShortString{T}"""
 function check_size(T, sz)
     max_len = sizeof(T) - size_bytes(T)  # the last few bytes are used to store the length
     if sz > max_len
@@ -18,14 +18,46 @@ function check_size(T, sz)
     end
 end
 
+"""Calculate the number of bytes required to store the size of the ShortString"""
 size_bytes(::Type{T}) where {T} = (count_ones(sizeof(T)-1)+7)>>3
 
+"""Calculate a mask to get the size stored in the ShortString"""
 size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
 size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
+"""The size of the chunk used to process String values"""
 const CHUNKSZ   = sizeof(UInt)
+
+"""The number of bits in the chunk type used to process String values"""
 const CHUNKBITS = sizeof(UInt) == 4 ? 32 : 64
 
+"""Internal function to pick up a byte at the given index in a ShortString"""
+@inline _get_byte(s::ShortString, i::Int) = (s.size_content >>> (8*(sizeof(s) - i)))%UInt8
+
+"""
+Internal function to pick up a UInt32 (i.e. to contain 1 Char) at the given index
+in a ShortString
+"""
+@inline function _get_word(s::ShortString{T}, i::Int) where {T}
+    sz = sizeof(T)
+    if sz <= 4
+        # Shift up by 0-3 bytes
+        (s.size_content%UInt32) << (8*(i + 3 - sz))
+    else
+        (s.size_content >>> (8*(sz - i - 3)))%UInt32
+    end
+end
+
+"""Internal function to get the UInt32 representation of a Char from an index in a ShortString"""
+@inline function _get_char(str::ShortString, pos::Int)
+    chr = _get_word(str, pos)
+    typ = chr >>> 28
+    chr & ~ifelse(typ < 0x8, 0xffffff,
+                  ifelse(typ < 0xe, 0x00ffff,
+                         ifelse(typ < 0xf, 0x0000ff, 0x000000)))
+end
+
+"""Internal function, given a String and it's size in bytes, load it into a value of type T"""
 @inline function _ss(::Type{T}, str::String, sz) where {T}
     if sizeof(T) <= sizeof(UInt)
         unsafe_load(reinterpret(Ptr{T}, pointer(str)))
@@ -80,6 +112,7 @@ end
 """Amount to shift ShortString value by for each UInt sized chunk"""
 const SHFT_INT = UInt === UInt32 ? 2 : 3
 
+# Optimized conversion of a ShortString to a String
 function String(s::ShortString{T}) where {T}
     len = sizeof(s)
     len === 0 && return ""
@@ -89,7 +122,7 @@ function String(s::ShortString{T}) where {T}
     pnt = reinterpret(Ptr{UInt}, pointer(sv))
     for i = 1:(len + sizeof(UInt) - 1) >>> SHFT_INT
         unsafe_store!(pnt, val % UInt)
-        val >>>= SHFT_INT
+        val >>>= 8*sizeof(UInt)
         pnt += sizeof(UInt)
     end
     String(sv)
@@ -106,21 +139,11 @@ Base.convert(::String, ss::ShortString) = String(ss)
 Base.sizeof(s::ShortString) = Int(s.size_content & size_mask(s))
 
 Base.firstindex(::ShortString) = 1
-Base.isvalid(s::ShortString, i::Integer) = isvalid(String(s), i)
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
-Base.show(io::IO, str::ShortString) = show(io, String(str))
-
-@inline function _get_word(s::ShortString{T}, i::Int) where {T}
-    sz = sizeof(T)
-    if sz <= 4
-        # Shift up by 0-3 bytes
-        (s.size_content%UInt32) << (8*(i + 3 - sz))
-    else
-        (s.size_content >>> (8*(sz - i - 3)))%UInt32
-    end
-end
+# Checks top two bits of first byte of character to see if valid position
+isvalid(s::String, i::Integer) = (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) != 0x80)
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
     0 < i <= ncodeunits(s) || return nothing
@@ -168,14 +191,6 @@ function Base.length(s::ShortString{T}) where T
     return len
 end
 
-@inline function _get_char(str::ShortString, pos::Int)
-    chr = _get_word(str, pos)
-    typ = chr >>> 28
-    chr & ~ifelse(typ < 0x8, 0xffffff,
-                  ifelse(typ < 0xe, 0x00ffff,
-                         ifelse(typ < 0xf, 0x0000ff, 0x000000)))
-end
-
 @propagate_inbounds function Base.getindex(str::ShortString, pos::Int=1)
     @_inline_meta()
     @boundscheck checkbounds(str, pos)
@@ -221,7 +236,10 @@ size_content(s::ShortString) = s.size_content
 
 @define_integers 2048 Int2048 UInt2048
 
-for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
+"""These are the default types used to for selecting the size of a ShortString"""
+const def_types = (UInt32, UInt64, UInt128, UInt256, UInt512, UInt1024, UInt2048)
+
+for T in def_types
     max_len = sizeof(T) - size_bytes(T)
     constructor_name = Symbol(:ShortString, max_len)
     macro_name = Symbol(:ss, max_len, :_str)
@@ -230,6 +248,26 @@ for T in (UInt2048, UInt1024, UInt512, UInt256, UInt128, UInt64, UInt32)
     @eval macro $(macro_name)(s)
         Expr(:call, $constructor_name, s)
     end
+end
+
+"""
+Return a ShortString type that can hold maxlen codeunits
+The keyword parameter `types` can be used to pass a list of types
+which can be used to store the string
+If no type is large enough, then an `ArgumentError` is thrown
+"""
+function get_type(maxlen; types=def_types)
+    for T in types
+        maxlen <= sizeof(T) - size_bytes(T) && return ShortString{T}
+    end
+    throw(ArgumentError("$maxlen is too large to fit into any of the provided types: $types"))
+end
+
+ShortString(str::Union{String,SubString{String}}, maxlen = sizeof(str); types=def_types) =
+    get_type(maxlen, types=types)(str)
+
+macro ss_str(str, max="0")
+    :( ShortString($str, $(parse(Int, max))) )
 end
 
 fsort(v::Vector{ShortString{T}}; rev = false) where {T} =
