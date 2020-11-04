@@ -263,8 +263,8 @@ function get_type(maxlen; types=def_types)
     throw(ArgumentError("$maxlen is too large to fit into any of the provided types: $types"))
 end
 
-ShortString(str::Union{String,SubString{String}}, maxlen = 0; types=def_types) =
-    get_type(maxlen <= 0 ? sizeof(str) : maxlen, types=types)(str)
+ShortString(str::Union{String,SubString{String}}, maxlen = sizeof(str); types=def_types) =
+    get_type(maxlen, types=types)(str)
 
 macro ss_str(str, max="0")
     :( ShortString($str, $(parse(Int, max))) )
