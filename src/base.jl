@@ -46,7 +46,8 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     ShortString{T}(content | T(sz))
 end
 
-const shft_int = UInt === UInt32 ? 2 : 3
+"""Amount to shift ShortString value by for each UInt sized chunk"""
+const SHFT_INT = UInt === UInt32 ? 2 : 3
 
 function String(s::ShortString{T}) where {T}
     len = sizeof(s)
@@ -55,9 +56,9 @@ function String(s::ShortString{T}) where {T}
     sv = Base.StringVector(len)
     # Loop over UInt64 sized chunks here
     pnt = reinterpret(Ptr{UInt}, pointer(sv))
-    for i = 1:(len + sizeof(UInt) - 1) >>> shft_int
+    for i = 1:(len + sizeof(UInt) - 1) >>> SHFT_INT
         unsafe_store!(pnt, val % UInt)
-        val >>>= shft_int
+        val >>>= SHFT_INT
         pnt += sizeof(UInt)
     end
     String(sv)
