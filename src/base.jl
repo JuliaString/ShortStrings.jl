@@ -237,7 +237,7 @@ size_content(s::ShortString) = s.size_content
 @define_integers 2048 Int2048 UInt2048
 
 """These are the default types used to for selecting the size of a ShortString"""
-const def_types = [UInt32, UInt64, UInt128, UInt256, UInt512, UInt1024, UInt2048]
+const def_types = (UInt32, UInt64, UInt128, UInt256, UInt512, UInt1024, UInt2048)
 
 for T in def_types
     max_len = sizeof(T) - size_bytes(T)
