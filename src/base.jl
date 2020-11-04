@@ -30,7 +30,7 @@ function ShortString{T}(s::Union{String, SubString{String}}) where {T}
     # TODO some times this can throw errors for longish strings
     # Exception: EXCEPTION_ACCESS_VIOLATION at 0x1e0b7afd -- bswap at C:\Users\RTX2080\.julia\packages\BitIntegers\xU40U\src\BitIntegers.jl:332 [inlined]
     # ntoh at .\io.jl:541 [inlined]
-    content = (T(s |> pointer |> Ptr{T} |> Base.unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
+    content = (T(s |> pointer |> Ptr{T} |> unsafe_load |> ntoh) >> bits_to_wipe) << bits_to_wipe
     ShortString{T}(content | T(sz))
 end
 
@@ -46,8 +46,23 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     ShortString{T}(content | T(sz))
 end
 
+"""Amount to shift ShortString value by for each UInt sized chunk"""
+const SHFT_INT = UInt === UInt32 ? 2 : 3
 
-String(s::ShortString) = String(reinterpret(UInt8, [s.size_content|>ntoh])[1:sizeof(s)])
+function String(s::ShortString{T}) where {T}
+    len = sizeof(s)
+    len === 0 && return ""
+    val = ntoh(s.size_content)
+    sv = Base.StringVector(len)
+    # Loop over UInt64 sized chunks here
+    pnt = reinterpret(Ptr{UInt}, pointer(sv))
+    for i = 1:(len + sizeof(UInt) - 1) >>> SHFT_INT
+        unsafe_store!(pnt, val % UInt)
+        val >>>= SHFT_INT
+        pnt += sizeof(UInt)
+    end
+    String(sv)
+end
 
 Base.codeunit(s::ShortString) = UInt8
 Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
