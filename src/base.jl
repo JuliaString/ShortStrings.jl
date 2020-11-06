@@ -2,34 +2,45 @@
 
 using BitIntegers: @define_integers
 
-import Base: unsafe_getindex, ==, show, promote_rule
+import Base: unsafe_getindex, ==, cmp, promote_rule
 using Base: @_inline_meta, @propagate_inbounds, @_propagate_inbounds_meta
 import Base.GC: @preserve
 
+"""
+Type for holding short, fixed maximum size strings efficiently
+"""
 struct ShortString{T} <: AbstractString where {T}
     size_content::T
 end
 
-"""Check if a string of size `sz` can be stored in ShortString{T}"""
-function check_size(T, sz)
-    max_len = sizeof(T) - size_bytes(T)  # the last few bytes are used to store the length
-    if sz > max_len
-        throw(ErrorException("sizeof(::$T) must be shorter than or equal to $(max_len) in length; you have supplied a string of size $sz"))
-    end
-end
+"""The size of the chunk used to process String values"""
+const CHUNKSZ   = sizeof(UInt)
+
+"""Mask used for alignment"""
+const CHUNKMSK = (CHUNKSZ-1)%UInt
+
+"""The number of bits in the chunk type used to process String values"""
+const CHUNKBITS = sizeof(UInt) == 4 ? 32 : 64
 
 """Calculate the number of bytes required to store the size of the ShortString"""
 size_bytes(::Type{T}) where {T} = (count_ones(sizeof(T)-1)+7)>>3
+
+"""Calculate the maximum length in bytes that can be stored in this ShortString"""
+max_len(T) = sizeof(T) - size_bytes(T)
+
+"""Check if a string of size `sz` can be stored in ShortString{T}"""
+@inline function check_size(T, sz)
+    maxlen = max_len(T)
+    sz > maxlen &&
+        throw(ErrorException("sizeof(::$T) must be shorter than or equal to $(maxlen) in length; you have supplied a string of size $sz"))
+end
 
 """Calculate a mask to get the size stored in the ShortString"""
 size_mask(T) = T((1<<(size_bytes(T)*8)) - 1)
 size_mask(s::ShortString{T}) where {T} = size_mask(T)
 
-"""The size of the chunk used to process String values"""
-const CHUNKSZ   = sizeof(UInt)
-
-"""The number of bits in the chunk type used to process String values"""
-const CHUNKBITS = sizeof(UInt) == 4 ? 32 : 64
+"""Get the contents of the ShortString without the size, in native order"""
+_swapped_str(s::ShortString) = ntoh(s.size_content & ~size_mask(s))
 
 """Internal function to pick up a byte at the given index in a ShortString"""
 @inline _get_byte(s::ShortString, i::Int) = (s.size_content >>> (8*(sizeof(s) - i)))%UInt8
@@ -105,8 +116,7 @@ function ShortString{T}(s::ShortString{S}) where {T, S}
     # size_mask(S) will return a mask for getting the size for Shorting Strings in (content size)
     # format, so something like 00001111 in binary.
     #  ~size_mask(S) will yield 11110000 which can be used as a mask to extract the content
-    content = ntoh(T(ntoh(s.size_content & ~size_mask(S))))
-    ShortString{T}(content | T(sz))
+    ShortString{T}(ntoh(T(_swapped_str(s))) | T(sz))
 end
 
 """Amount to shift ShortString value by for each UInt sized chunk"""
@@ -129,16 +139,16 @@ function String(s::ShortString{T}) where {T}
 end
 
 Base.codeunit(s::ShortString) = UInt8
-Base.codeunit(s::ShortString, i) = codeunits(String(s), i)
-Base.codeunit(s::ShortString, i::Integer) = codeunit(String(s), i)
-Base.codeunits(s::ShortString) = codeunits(String(s))
+@inline function Base.codeunit(s::ShortString, i::Integer)
+    @boundscheck checkbounds(s, i)
+    _get_byte(s, i)
+end
 
 Base.convert(::ShortString{T}, s::String) where {T} = ShortString{T}(s)
 Base.convert(::String, ss::ShortString) = String(ss)
 
 Base.sizeof(s::ShortString) = Int(s.size_content & size_mask(s))
 
-Base.firstindex(::ShortString) = 1
 Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
@@ -162,7 +172,7 @@ end
 
 @inline function Base.isascii(s::ShortString{T}) where {T}
     val = s.size_content >>> (8*size_bytes(T))
-    for i in 1:(sizeof(T)-size_bytes(T))
+    for i in 1:max_len(T)
         iszero(val & 0x80) || return false
         val >>>= 8
     end
@@ -197,29 +207,59 @@ end
     reinterpret(Char, _get_char(str, pos))
 end
 
-function ==(s::ShortString{S}, b::Union{String, SubString{String}}) where {S}
-    ncodeunits(b) == ncodeunits(s) || return false
-    return s == ShortString{S}(b)
+@inline _mask_bytes(n) = ((1%UInt) << ((n & CHUNKMSK) << 3)) - 0x1
+
+# Optimized version of checking for equality against a string
+function ==(a::ShortString, b::String)
+    sz = sizeof(a)
+    sizeof(b) == sz || return false
+    sz == 0 || return true
+    val = _swapped_str(a)
+    @preserve b begin
+        pnt = reinterpret(Ptr{UInt}, pointer(b))
+        while sz >= sizeof(UInt)
+            xor(val & typemax(UInt), unsafe_load(pnt)) == 0 || return false
+            sz -= sizeof(UInt)
+            val >>>= 8*sizeof(UInt)
+            pnt += CHUNKSZ
+        end
+        return sz === 0 || val == (unsafe_load(pnt) & _mask_bytes(sz))
+    end
 end
-function ==(s::ShortString, b::AbstractString)
-    # Could be a string type that might not use UTF8 encoding and that we don't have a
-    # constructor for. Defer to equality that type probably has defined on `String`
-    return String(s) == b
+
+# This can be optimized to be much faster, like the code in StrBase.jl, doing 4 or 8 byte
+# chunks, as above, but it has to deal with alignment.  Will add to a later PR
+function ==(s::ShortString, b::SubString{String})
+    sz = sizeof(s)
+    sizeof(b) == sz || return false
+    sz == 0 || return true
+    val = _swapped_str(s)
+    @preserve s begin
+        pnt = pointer(b)
+        while (sz -= 1) >= 0
+            unsafe_load(pnt) == (val & 0xff) || return false
+            pnt += 1
+            val >>>= 8
+        end
+    end
+    return true
 end
 
 ==(a::AbstractString, b::ShortString) = b == a
-function ==(a::ShortString{S}, b::ShortString{S}) where {S}
-    return a.size_content == b.size_content
-end
-function ==(a::ShortString{A}, b::ShortString{B}) where {A,B}
-    ncodeunits(a) == ncodeunits(b) || return false
-    # compare if equal after dropping size bits and
-    # flipping so that the empty bytes are at the start
-    ntoh(a.size_content & ~size_mask(A)) == ntoh(b.size_content & ~size_mask(B))
-end
 
-function Base.cmp(a::ShortString{S}, b::ShortString{S}) where {S}
-    return cmp(a.size_content, b.size_content)
+==(a::ShortString{S}, b::ShortString{S}) where {S} = (a.size_content == b.size_content)
+
+# compare if equal after dropping size bits and flipping so that the empty bytes are at the start
+==(a::ShortString, b::ShortString) = sizeof(a) == sizeof(b) && _swapped_str(a) == _swapped_str(b)
+
+cmp(a::ShortString{S}, b::ShortString{S}) where {S} = cmp(a.size_content, b.size_content)
+
+function cmp(a::ShortString{S}, b::ShortString{T}) where {S,T}
+    if sizeof(T) > sizeof(S)
+        cmp(ntoh(T(_swapped_str(a))) | T(sizeof(a)), b.size_content)
+    else
+        cmp(a.size_content, ntoh(T(_swapped_str(b))) | T(sizeof(b)))
+    end
 end
 
 promote_rule(::Type{String}, ::Type{ShortString{S}}) where {S} = String
@@ -240,9 +280,9 @@ size_content(s::ShortString) = s.size_content
 const def_types = (UInt32, UInt64, UInt128, UInt256, UInt512, UInt1024, UInt2048)
 
 for T in def_types
-    max_len = sizeof(T) - size_bytes(T)
-    constructor_name = Symbol(:ShortString, max_len)
-    macro_name = Symbol(:ss, max_len, :_str)
+    maxlen = max_len(T)
+    constructor_name = Symbol(:ShortString, maxlen)
+    macro_name = Symbol(:ss, maxlen, :_str)
 
     @eval const $constructor_name = ShortString{$T}
     @eval macro $(macro_name)(s)
@@ -257,17 +297,39 @@ which can be used to store the string
 If no type is large enough, then an `ArgumentError` is thrown
 """
 function get_type(maxlen; types=def_types)
+    maxlen < 1 && throw(ArgumentError("$maxlen is <= 0"))
     for T in types
-        maxlen <= sizeof(T) - size_bytes(T) && return ShortString{T}
+        maxlen <= max_len(T) && return ShortString{T}
     end
     throw(ArgumentError("$maxlen is too large to fit into any of the provided types: $types"))
 end
 
+"""
+Create a ShortString, using the smallest ShortString that can fit the string, unless the second
+argument `maxlen` is passed.
+If the keyword argument `types` is passed with a list (a tuple or Vector) of Unsigned
+types, in order of their size, then one of those types will be used.
+"""
 ShortString(str::Union{String,SubString{String}}, maxlen = sizeof(str); types=def_types) =
     get_type(maxlen, types=types)(str)
 
-macro ss_str(str, max="0")
-    :( ShortString($str, $(parse(Int, max))) )
+"""
+Create a ShortString, using the smallest ShortString that can fit the string,
+unless it is optionally followed by a single ASCII character and a maximum length.
+`ss"foo"b255` indicates that a ShortString that can contain 255 bytes should be used.
+"""
+macro ss_str(str, max=nothing)
+    if max === nothing
+        maxlen = sizeof(str)
+    elseif max isa Integer
+        maxlen = max
+    elseif max isa String
+        maxlen = tryparse(Int, isdigit(max[1]) ? max : max[2:end])
+        maxlen === nothing && throw(ArgumentError("Optional length $max not a valid Integer"))
+    else
+        throw(ArgumentError("Unsupported type $(typeof(max)) for optional length $max"))
+    end
+    :( ShortString($str, $maxlen) )
 end
 
 fsort(v::Vector{ShortString{T}}; rev = false) where {T} =

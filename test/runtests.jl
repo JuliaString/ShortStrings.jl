@@ -123,3 +123,13 @@ end
 
 # Iterations
 @test collect(ShortString15("x∫yâz")) == ['x','∫','y','â','z']
+
+@testset "Constructors" begin
+    @test typeof(ShortString("foo")) === ShortString3
+    @test typeof(ShortString("foo", 255)) === ShortString255
+    @test typeof(ss"foo") == ShortString3
+    @test typeof(ss"foo"b255) == ShortString255
+
+    @test_throws ErrorException ShortString("foobar", 3)
+    @test_throws ErrorException ss"foobar"b3
+end
