@@ -1,7 +1,7 @@
 ## ShortStrings
-This is an efficient string format for storing strings using integer types. For example, `UInt32` can hold 3 bytes of string with 1 byte to record the size of the string and a `UInt128` can hold a byte string with 1 byte to record the size of the string.
+This is an efficient string format for storing strings using integer types. For example, `UInt32` can hold 3 bytes of string with 1 byte to record the size of the string and a `UInt128` can hold a 15-byte string with 1 byte to record the size of the string.
 
-Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package support string with up to 255 bytes in size.
+Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package supports string with up to 255 bytes in size.
 
 ## Quick Start
 ```julia
