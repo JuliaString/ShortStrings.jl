@@ -153,7 +153,8 @@ Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
 # Checks top two bits of first byte of character to see if valid position
-isvalid(s::String, i::Integer) = (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) != 0x80)
+Base.isvalid(s::ShortString, i::Integer) =
+    (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) != 0x80)
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
     0 < i <= ncodeunits(s) || return nothing
