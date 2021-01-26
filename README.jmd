@@ -1,4 +1,9 @@
-## ShortStrings
+# ShortStrings
+
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/JuliaString/ShortStrings.jl/issues)
+[![CI](https://github.com/JuliaString/ShortStrings.jl/workflows/CI/badge.svg)](https://github.com/JuliaString/ShortStrings.jl/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/JuliaString/ShortStrings.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaString/ShortStrings.jl)
+
 This is an efficient string format for storing strings using integer types. For example, `UInt32` can hold 3 bytes of string with 1 byte to record the size of the string and a `UInt128` can hold a 15-byte string with 1 byte to record the size of the string.
 
 Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package supports string with up to 255 bytes in size.
@@ -92,15 +97,3 @@ bar(["Base.sort","SortingLab.radixsort","ShortStrings radix sort", "R radix sort
 
 ## Notes
 This is based on the discussion [here](https://discourse.julialang.org/t/progress-towards-faster-sortperm-for-strings/8505/4?u=xiaodai). If Julia.Base adopts the hybrid representation of strings then it makes this package redundant.
-
-# Build Status
-
-[contrib]:     https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
-[travis-url]:  https://travis-ci.org/JuliaString/ShortStrings.jl
-[travis-img]:  https://travis-ci.org/JuliaString/ShortStrings.jl.svg?branch=master
-[codecov-url]:  https://codecov.io/gh/JuliaString/ShortStrings.jl?branch=master
-[codecov-img]:  https://codecov.io/gh/JuliaString/ShortStrings.jl/branch/master/graph/badge.svg
-
-[![contributions welcome][contrib]](https://github.com/JuliaString/Strs.jl/issues)
-[![][travis-img]][travis-url]
-[![][codecov-img]][codecov-url]
