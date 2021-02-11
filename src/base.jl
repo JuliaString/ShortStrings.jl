@@ -213,7 +213,7 @@ end
 function ==(a::ShortString, b::String)
     sz = sizeof(a)
     sizeof(b) == sz || return false
-    sz == 0 || return true
+    sz == 0 && return true
     val = _swapped_str(a)
     @preserve b begin
         pnt = reinterpret(Ptr{UInt}, pointer(b))
@@ -232,7 +232,7 @@ end
 function ==(s::ShortString, b::SubString{String})
     sz = sizeof(s)
     sizeof(b) == sz || return false
-    sz == 0 || return true
+    sz == 0 && return true
     val = _swapped_str(s)
     @preserve s begin
         pnt = pointer(b)
