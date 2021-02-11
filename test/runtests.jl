@@ -34,6 +34,7 @@ function basic_test(string_type, constructor, max_len)
     @test str_maxlen == short_maxlen
     @test short_maxlen == short_maxlen
     @test short_maxlen != constructor("d"^max_len)
+    @test short_maxlen != string_type("d"^max_len)
     @test short_maxlen != short_maxlen_m_1
     @test short_maxlen_m_1 != short_maxlen
     @test short_maxlen != str_maxlen_m_1
