@@ -134,3 +134,26 @@ end
     @test_throws ErrorException ShortString("foobar", 3)
     @test_throws ErrorException ss"foobar"b3
 end
+
+
+@testset "codeunit $T" for T in (ShortString3, ShortString7, ShortString255)
+    @test codeunit(T("abc"), 1) == 0x61
+    @test codeunit(T("abc"), 2) == 0x62
+    @test codeunit(T("abc"), 3) == 0x63
+end
+
+@testset "isvalid" begin
+    @test !isvalid(ShortString("a🍕c"), 0)
+    @test isvalid(ShortString("a🍕c"), 1)
+    @test isvalid(ShortString("a🍕c"), 2)
+    @test !isvalid(ShortString("a🍕c"), 3)
+    @test !isvalid(ShortString("a🍕c"), 4)
+    @test !isvalid(ShortString("a🍕c"), 5)
+    @test isvalid(ShortString("a🍕c"), 6)
+    @test !isvalid(ShortString("a🍕c"), 7)
+end
+
+@testset "split" begin
+    @test split(ShortString15("abc XYZ x")) == ["abc", "XYZ", "x"]
+    @test split(ShortString15("abc XYZ x")) isa Vector{SubString{ShortString15}}
+end

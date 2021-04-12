@@ -43,7 +43,9 @@ size_mask(s::ShortString{T}) where {T} = size_mask(T)
 _swapped_str(s::ShortString) = ntoh(s.size_content & ~size_mask(s))
 
 """Internal function to pick up a byte at the given index in a ShortString"""
-@inline _get_byte(s::ShortString, i::Int) = (s.size_content >>> (8*(sizeof(s) - i)))%UInt8
+@inline function _get_byte(s::ShortString{T}, i::Int) where T
+    return (s.size_content >>> (8*(sizeof(T) - i)))%UInt8
+end
 
 """
 Internal function to pick up a UInt32 (i.e. to contain 1 Char) at the given index
@@ -153,7 +155,9 @@ Base.lastindex(s::ShortString) = sizeof(s)
 Base.ncodeunits(s::ShortString) = sizeof(s)
 
 # Checks top two bits of first byte of character to see if valid position
-isvalid(s::String, i::Integer) = (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) != 0x80)
+function Base.isvalid(s::ShortString, i::Integer)
+    return (0 < i <= sizeof(s)) && ((_get_byte(s, i) & 0xc0) !== 0x80)
+end
 
 @inline function Base.iterate(s::ShortString, i::Int=1)
     0 < i <= ncodeunits(s) || return nothing
