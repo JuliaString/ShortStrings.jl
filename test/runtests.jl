@@ -133,6 +133,12 @@ end
 
     @test_throws ErrorException ShortString("foobar", 3)
     @test_throws ErrorException ss"foobar"b3
+
+
+    @test ShortString7(Test.GenericString("abcde")) == "abcde"
+    @test ShortString7(Test.GenericString("abcde")) isa ShortString7
+    @test ShortString7(SubString(Test.GenericString("abcde"), 2)) == "bcde"
+    @test ShortString7(SubString(Test.GenericString("abcde"), 2)) isa ShortString7
 end
 
 
