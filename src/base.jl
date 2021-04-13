@@ -101,6 +101,8 @@ end
     val
 end
 
+ShortString{T}(s::AbstractString) where T = ShortString{T}(String(s))
+
 function ShortString{T}(s::Union{String,SubString{String}}) where {T}
     sz = sizeof(s)
     sz === 0 && return ShortString{T}(T(0))
