@@ -264,7 +264,7 @@ function cmp(a::ShortString{S}, b::ShortString{T}) where {S,T}
     if sizeof(T) > sizeof(S)
         cmp(ntoh(T(_swapped_str(a))) | T(sizeof(a)), b.size_content)
     else
-        cmp(a.size_content, ntoh(T(_swapped_str(b))) | T(sizeof(b)))
+        cmp(a.size_content, ntoh(S(_swapped_str(b))) | S(sizeof(b)))
     end
 end
 

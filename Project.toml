@@ -1,7 +1,7 @@
 name = "ShortStrings"
 uuid = "63221d1c-8677-4ff0-9126-0ff0817b4975"
 authors = ["Dai ZJ <zhuojia.dai@gmail.com>", "ScottPJones <scottjones@alum.mit.edu>", "Lyndon White <lyndon.white@invenialabs.co.uk>"]
-version = "0.3.7"
+version = "0.3.8"
 
 [deps]
 BitIntegers = "c3b6d118-76ef-56ca-8cc7-ebb389d030a1"
