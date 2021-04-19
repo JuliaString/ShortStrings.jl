@@ -102,6 +102,9 @@ end
     @test cmp(ShortString3("ac"), "ab") == 1
     @test cmp(ShortString3("α"), "a") == 1
     @test cmp(ShortString3("b"), "β") == -1
+
+    # Test issue #45
+    @test cmp(ShortString15("a"), ShortString7("b")) == -1
 end
 
 @testset "Construction from other ShortStrings" begin
