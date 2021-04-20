@@ -139,9 +139,9 @@ end
     
     
     @test ShortString(:abcde) == "abcde"
-    @test ShortString(:abcde)) isa ShortString7
+    @test ShortString(:abcde) isa ShortString7
     @test ShortString15(:abcde) == "abcde"
-    @test ShortString15(:abcde)) isa ShortString15
+    @test ShortString15(:abcde) isa ShortString15
 
 
     @test ShortString7(Test.GenericString("abcde")) == "abcde"
