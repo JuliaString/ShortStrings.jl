@@ -113,7 +113,8 @@ end
 
 ShortString{T}(s::ShortString{T}) where {T} = s
 
-ShortString(s::Symbol) where {T} = ShortString{T}(String(s))
+ShortString(s::Symbol) = ShortString(String(s))
+ShortString{T}(s::Symbol) where {T} = ShortString{T}(String(s))
 
 function ShortString{T}(s::ShortString{S}) where {T, S}
     sz = sizeof(s)
