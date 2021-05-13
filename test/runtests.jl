@@ -66,7 +66,7 @@ ss = ShortString15(s)
 @test s[1] == ss[1]
 
 @test ss127"Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long." === ShortString127("Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long.")
-@test ss63"Basically a failly long string really" === ShortString63("Basically a failly long string really")
+@test ss63"Basically a fairly long string really" === ShortString63("Basically a fairly long string really")
 @test ss31"A Longer String!!!" === ShortString31("A Longer String!!!")
 
 @test ss15"Short String!!!" === ShortString15("Short String!!!")
