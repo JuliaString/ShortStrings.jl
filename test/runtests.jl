@@ -20,6 +20,8 @@ function basic_test(string_type, constructor, max_len)
 
     a = constructor.(r)
     @test fsort(a) |> issorted
+    @test issorted(fsort!(a))
+    @test issorted(fsortperm(a)) # sortperm is sorted because we sorted a in-place
 
     @test collect(constructor("z"^max_len)) == fill('z', max_len)
     @test_throws ErrorException constructor("a"^(max_len+1))
@@ -171,4 +173,17 @@ end
 @testset "split" begin
     @test split(ShortString15("abc XYZ x")) == ["abc", "XYZ", "x"]
     @test split(ShortString15("abc XYZ x")) isa Vector{SubString{ShortString15}}
+end
+
+@testset "extra coverage" begin
+    @test codeunit(ShortString("a🍕c")) == UInt8
+    @test convert(ShortString{UInt32}, "abc") === ss3"abc"
+    @test convert(String, ss3"abc") === "abc"
+    @test length(ShortString("¢")) == 2 # 2-byte character
+    @test ShortStrings.cmp(ss3"abc", ss7"abc") == 0
+    @test promote_rule(String, ShortString7) == String
+    @test promote_rule(ShortString3, ShortString7) == ShortString7
+    @test promote_rule(ShortString7, ShortString3) == ShortString7
+    @test_throws ArgumentError ss"abc"3000
+    @test_throws LoadError @macroexpand ss"abc"true
 end
