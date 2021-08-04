@@ -320,7 +320,7 @@ If the keyword argument `types` is passed with a list (a tuple or Vector) of Uns
 types, in order of their size, then one of those types will be used.
 """
 ShortString(str::Union{String,SubString{String}}, maxlen = sizeof(str); types=def_types) =
-    get_type(maxlen, types=types)(str)
+    get_type(max(maxlen,1), types=types)(str)
 
 """
 Create a ShortString, using the smallest ShortString that can fit the string,

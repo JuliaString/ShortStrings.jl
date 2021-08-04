@@ -72,9 +72,13 @@ ss = ShortString15(s)
 @test ss15"Short String!!!" === ShortString15("Short String!!!")
 @test ss7"ShrtStr" === ShortString7("ShrtStr")
 @test ss3"ss3" === ShortString3("ss3")
+@test ss"" === ShortString("")
 
 
 @testset "equality of different sized ShortStrings" begin
+    @test ShortString15("") == ShortString3("")
+    @test ShortString3("") == ShortString15("")
+
     @test ShortString15("ab") == ShortString3("ab")
     @test ShortString3("ab") == ShortString15("ab")
 
@@ -171,4 +175,12 @@ end
 @testset "split" begin
     @test split(ShortString15("abc XYZ x")) == ["abc", "XYZ", "x"]
     @test split(ShortString15("abc XYZ x")) isa Vector{SubString{ShortString15}}
+end
+
+@testset "test all default valid string sizes" begin
+    size_limit = 255
+    svec_good = [randstring(i) for i=0:size_limit]
+    @test typeof(ShortString.(svec_good)) == Vector{ShortString}
+    s_bad = randstring(size_limit + 1)
+    @test_throws ArgumentError ShortString(s_bad)
 end
