@@ -319,7 +319,7 @@ argument `maxlen` is passed.
 If the keyword argument `types` is passed with a list (a tuple or Vector) of Unsigned
 types, in order of their size, then one of those types will be used.
 """
-ShortString(str::Union{String,SubString{String}}, maxlen = sizeof(str); types=def_types) =
+ShortString(str::AbstractString, maxlen = sizeof(str); types=def_types) =
     get_type(max(maxlen,1), types=types)(str)
 
 """
