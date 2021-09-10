@@ -122,6 +122,14 @@ end
     @test ShortString7(ShortString7("ab")) isa ShortString7
 
     @test_throws ErrorException ShortString3(ShortString7("123456"))
+
+    @test ShortString(ss127"Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long.", 127) == "Be honest, do you actually need a string longer than this. Seriously. C'mon this is pretty long."
+    @test ShortString(ss63"Basically a fairly long string really",63) == "Basically a fairly long string really"
+    @test ShortString(ss31"A Longer String!!!",31) == "A Longer String!!!"
+    @test ShortString(ss15"Short String!!!",15) == "Short String!!!"
+    @test ShortString(ss7"ShrtStr",7) == "ShrtStr"
+    @test ShortString(ss3"ss3",3) == "ss3"
+    @test ShortString("",0) == ""
 end
 
 @testset "promote rule" begin
