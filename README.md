@@ -1,4 +1,12 @@
 ## ShortStrings
+| ⚠️ Notice ⚠️ |
+| --- |
+| **ShortStrings.jl is deprecated** |
+| [InlineStrings.jl's `InlineString`](https://github.com/JuliaData/InlineStrings.jl) is the same idea, but a more complete implementation. |
+| We feel no need to duplicate efforts in the ecosystem. Moving should be pretty painless.|
+
+
+
 This is an efficient string format for storing strings using integer types. For example, `UInt32` can hold 3 bytes of string with 1 byte to record the size of the string and a `UInt128` can hold a 15-byte string with 1 byte to record the size of the string.
 
 Using BitIntegers.jl, integer of larger size than `UInt128` can be defined. This package supports string with up to 255 bytes in size.
