@@ -2,7 +2,7 @@
 | ⚠️ Notice ⚠️ |
 | --- |
 | **ShortStrings.jl is deprecated** |
-| [WeakRefString.jl's `InlineString`](https://github.com/JuliaData/WeakRefStrings.jl#inlinestring) is the same idea, but a more complete implementation. |
+| [InlineStrings.jl's `InlineString`](https://github.com/JuliaData/InlineStrings.jl) is the same idea, but a more complete implementation. |
 | We feel no need to duplicate efforts in the ecosystem. Moving should be pretty painless.|
 
 
